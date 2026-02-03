@@ -1,115 +1,95 @@
 # TerraInsight 🌿
 
-**EcoPulse AI Dashboard** - Intelligent ecological impact analysis platform
+**EcoPulse AI Dashboard** - Intelligent ecological impact analysis platform.
 
-## Overview
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-Latest-black?style=flat-square)](https://sdk.vercel.ai/)
 
-TerraInsight is a modern Next.js 15 dashboard that helps organizations analyze their ecological footprint through AI-powered insights. Upload energy reports, carbon footprint data, and get intelligent recommendations for sustainability improvements.
+## 🌍 Overview
+
+TerraInsight is a high-performance Next.js 15 dashboard designed to bridge the gap between complex ecological data and actionable sustainability. By leveraging **Agentic Workflows**, the platform allows organizations to upload energy reports and carbon footprint data to receive real-time, AI-driven strategic recommendations.
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Analysis** - Chat with EcoPulse AI for ecological insights
-- 📊 **Smart File Processing** - Upload CSV, PDF, and Excel reports
-- 🌱 **Sustainability Workflows** - Automated green action recommendations
-- 🎨 **Modern UI** - Beautiful ecological theme with emerald accents
-- ⚡ **Next.js 15** - Latest React features with App Router
-- 🎯 **TypeScript** - Full type safety throughout
+- 🤖 **AI-Powered Analysis** - Real-time streaming chat with EcoPulse AI for deep ecological insights.
+- 📊 **Smart File Processing** - Seamless upload and parsing of CSV and PDF environmental reports.
+- 🌱 **Agentic Workflows** - Autonomous identification of anomalies with automated "Green Action" suggestions.
+- 🎨 **Modern UI/UX** - Premium dark-themed interface with emerald accents, built for professional sustainability officers.
+- ⚡ **Edge-Ready Performance** - Optimized with Next.js 15 App Router for maximum efficiency.
+
+## 🤖 AI Development Report (The "Accelerator" Factor)
+
+This project was built using an **AI-First Development Workflow**, demonstrating how Generative AI can accelerate senior-level delivery:
+
+- **IDE & Pair Programming:** Developed using **Cursor** with **Claude 3.5 Sonnet**.
+- **Architectural Decisions:** AI was utilized to architect the separation between Server and Client components, ensuring strict compliance with Next.js 15 patterns.
+- **Rapid Scaffolding:** Used Cursor's Composer to initialize the complex dashboard structure and Shadcn/UI integration in record time.
+- **Efficiency Gain:** Estimated **70% reduction** in boilerplate coding, allowing 100% focus on the Agentic logic and Sustainability UX.
+
+## 🧠 Agentic Workflow & Intelligence
+
+TerraInsight is not just a chat; it's an active agent.
+- **Custom Agent:** Defined in [AGENTS.md](./AGENTS.md).
+- **Function Calling:** The agent is equipped with tools to trigger external workflows (simulated via n8n) when ecological risks are detected.
+- **Streaming UI:** Uses Vercel AI SDK to provide a fluid, interactive experience.
 
 ## 🚀 Tech Stack
 
-- **Framework:** Next.js 15 with App Router
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS with custom ecological theme
-- **AI:** Vercel AI SDK with OpenAI integration
-- **UI Components:** shadcn/ui with Radix UI primitives
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript (Strict Mode)
+- **AI Orchestration:** Vercel AI SDK
+- **Styling:** Tailwind CSS (Custom Ecological Theme)
+- **Components:** shadcn/ui (Radix UI)
 - **Icons:** Lucide React
-- **Fonts:** DM Sans from Google Fonts
 
 ## 🛠️ Getting Started
 
 ### Prerequisites
-
-- Node.js 20.20+ 
-- npm or yarn
+- Node.js 20.20+
+- npm / pnpm / yarn
 
 ### Installation
 
-1. **Clone the repository:**
-   \`\`\`bash
+1. **Clone & Enter:**
+   ```bash
    git clone https://github.com/your-username/terrainsight.git
    cd terrainsight
-   \`\`\`
 
-2. **Install dependencies:**
-   \`\`\`bash
-   npm install
-   \`\`\`
-
-3. **Set up environment variables:**
-   \`\`\`bash
-   cp .env.example .env.local
-   \`\`\`
    
-   Add your OpenAI API key:
-   \`\`\`
-   OPENAI_API_KEY=your_openai_api_key_here
-   \`\`\`
-
-4. **Run the development server:**
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-
-5. **Open your browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 📁 Project Structure
-
-\`\`\`
+Install Dependencies:
+bash
+Copy
+npm install
+Environment Setup:
+Create a .env.local file:
+env
+Copy
+OPENAI_API_KEY=your_openai_api_key_here
+Launch:
+bash
+Copy
+npm run dev
+📁 Project Structure
+text
+Copy
 src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   │   ├── chat/          # AI chat endpoint
-│   │   └── analyze/       # File analysis endpoint
-│   ├── agent-settings/    # AI agent configuration
-│   ├── reports/           # Reports dashboard
-│   └── globals.css        # Global styles
+├── app/                # Next.js App Router & API Routes
+│   ├── api/analyze     # File parsing & AI logic
+│   └── api/chat        # Vercel AI SDK streaming endpoint
 ├── components/
-│   ├── dashboard/         # Main dashboard components
-│   │   ├── eco-agent.tsx     # AI chat interface
-│   │   ├── eco-dropzone.tsx  # File upload component
-│   │   └── sidebar.tsx       # Navigation sidebar
-│   └── ui/                # Reusable UI components
-└── lib/
-    └── utils.ts           # Utility functions
-\`\`\`
+│   ├── dashboard/      # Agentic UI & Dropzone components
+│   └── ui/             # Atomic Shadcn components
+├── lib/                # AI Tools & Sustainability logic
+└── hooks/              # Custom React hooks for UI state
 
-## 🎨 Design System
 
-### Colors
-- **Primary:** Emerald green (#10b981) - Representing growth and sustainability
-- **Background:** Charcoal variants - Modern, professional look
-- **Accents:** Forest green shades for ecological feel
+🎨 Design System
+Primary: Emerald Green (#10b981) - Growth & Sustainability.
+Background: Deep Charcoal - Professionalism & Focus.
+Typography: DM Sans - Modern readability.
 
-### Typography
-- **Font:** DM Sans - Clean, modern, and highly readable
+Built with 💚 for a sustainable future.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (\`git checkout -b feature/AmazingFeature\`)
-3. Commit your changes (\`git commit -m 'Add some AmazingFeature'\`)
-4. Push to the branch (\`git push origin feature/AmazingFeature\`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🌍 Environmental Impact
-
-TerraInsight is built with sustainability in mind - helping organizations reduce their ecological footprint through data-driven insights and AI-powered recommendations.
-
----
-
-Built with 💚 for a sustainable future
+TerraInsight - Turning data into ecological action.
