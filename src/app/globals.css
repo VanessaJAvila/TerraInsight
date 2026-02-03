@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 180 6% 7%;
+    --foreground: 150 20% 96%;
+    --card: 180 6% 10%;
+    --card-foreground: 150 20% 96%;
+    --popover: 180 6% 10%;
+    --popover-foreground: 150 20% 96%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 180 6% 7%;
+    --secondary: 180 6% 15%;
+    --secondary-foreground: 150 20% 96%;
+    --muted: 180 6% 15%;
+    --muted-foreground: 150 10% 65%;
+    --accent: 160 84% 39%;
+    --accent-foreground: 180 6% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 150 20% 96%;
+    --border: 180 6% 18%;
+    --input: 180 6% 18%;
+    --ring: 160 84% 39%;
+    --radius: 0.5rem;
+    --chart-1: 160 84% 39%;
+    --chart-2: 150 60% 45%;
+    --chart-3: 170 70% 40%;
+    --chart-4: 140 50% 50%;
+    --chart-5: 120 60% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Premium Green-Tech accents */
+.eco-glow {
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.25);
+}
+
+.eco-border {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Subtle grid background */
+.eco-grid-bg {
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
