@@ -2,7 +2,7 @@
 
 import { useChat } from "ai/react";
 import { useRef, useEffect, useMemo, useState } from "react";
-import { Send, Bot, Sparkles, Loader2, Zap, Leaf } from "lucide-react";
+import { Send, Bot, Sparkles, Loader2, Zap, Leaf, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { calculateChatEnergyConsumption } from "@/lib/utils/analysis";
@@ -36,8 +36,9 @@ interface EcoAgentProps {
 export function EcoAgent({ aiContext }: EcoAgentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionEnergy, setSessionEnergy] = useState(0);
+  const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+  const { messages, input, handleInputChange, handleSubmit, isLoading, append } =
     useChat({
       api: "/api/chat",
       initialMessages: [
@@ -83,6 +84,64 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
     setSessionEnergy(totalEnergy);
   }, [displayMessages]);
 
+  const handleDemoGeneration = async () => {
+    setIsGeneratingDemo(true);
+    
+    try {
+      // Call the demo API
+      const response = await fetch('/api/demo/generate-and-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Create summary message
+        const summaryContent = `🎯 **Agentic Analysis Complete!**
+
+📋 **Generated Report**: ${result.generatedData.filename}
+📊 **Records Analyzed**: ${result.generatedData.recordCount} data points
+🚨 **Critical Values Found**: ${result.generatedData.criticalValues} entries
+📈 **Peak Consumption**: ${result.generatedData.maxConsumption} kWh
+
+⚠️ **Anomalies Detected**: ${result.result.anomaly.detected ? 'YES' : 'NO'}
+${result.result.anomaly.detected ? `🔍 **Issues**: ${result.result.anomaly.issues.join('; ')}` : ''}
+${result.result.webhookTriggered ? '✅ **Workflow Triggered**: n8n automation activated' : ''}
+
+💡 You can now ask: "What did you find in the synthetic report?"`;
+
+        // Simulate the agent responding with the summary
+        append({
+          role: 'user',
+          content: 'Generate and analyze a demo critical waste report'
+        });
+        
+        // The summary will be shown through the normal chat flow
+        setTimeout(() => {
+          append({
+            role: 'assistant', 
+            content: summaryContent
+          });
+        }, 1500);
+        
+      } else {
+        append({
+          role: 'assistant',
+          content: '❌ **Demo Generation Failed**\n\nThere was an issue generating the synthetic report. Please try again or contact support.'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Demo generation error:', error);
+      append({
+        role: 'assistant',
+        content: '❌ **Demo Generation Error**\n\nFailed to connect to demo generation service. Please check your connection and try again.'
+      });
+    } finally {
+      setIsGeneratingDemo(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -182,6 +241,24 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
           </div>
         )}
 
+        {isGeneratingDemo && (
+          <div className="flex gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-600/30 animate-pulse">
+              <Wand2 className="h-4 w-4 text-emerald-300 animate-spin" />
+            </div>
+            <div className="rounded-lg bg-gradient-to-r from-emerald-900/40 via-emerald-800/30 to-emerald-700/40 border border-emerald-500/40 px-4 py-2.5 text-sm text-emerald-200 shadow-lg">
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
+                <span className="font-medium">🔮 Agentic Analysis in Progress...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         
         {isLoading && !isExecutingTool && (
           <div className="flex gap-3">
@@ -196,7 +273,29 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+      {/* Magic Button */}
+      <div className="mt-4 mb-3">
+        <Button
+          onClick={handleDemoGeneration}
+          disabled={isGeneratingDemo || isLoading}
+          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white border-emerald-500 shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
+          suppressHydrationWarning={true}
+        >
+          {isGeneratingDemo ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Generating & Analyzing...
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-4 w-4 mr-2" />
+              Generate & Analyze Demo Report
+            </>
+          )}
+        </Button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           value={input}
           onChange={handleInputChange}
