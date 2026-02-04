@@ -1,13 +1,16 @@
 "use client";
 
 import { useChat } from "ai/react";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { Send, Bot, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function EcoAgent() {
-  const [analyzeMode, setAnalyzeMode] = useState(false);
+interface EcoAgentProps {
+  readonly aiContext?: string;
+}
+
+export function EcoAgent({ aiContext }: EcoAgentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
@@ -20,6 +23,7 @@ export function EcoAgent() {
           content: `🌿 **Welcome to EcoPulse AI**\n\nI'm your ecological impact analyst. I can help you:\n\n• Analyze carbon footprint from energy reports\n• Identify waste reduction opportunities\n• Suggest sustainability actions (triggers green workflows)\n• Compare emissions across periods\n\nUpload a report or ask me anything about your ecological impact.`,
         },
       ],
+      body: aiContext ? { aiContext } : undefined,
     });
 
   useEffect(() => {
@@ -42,7 +46,7 @@ export function EcoAgent() {
             </p>
           </div>
         </div>
-        {analyzeMode && (
+        {isLoading && (
           <span className="flex items-center gap-1.5 rounded-full bg-emerald-accent/10 px-2.5 py-1 text-xs text-emerald-accent">
             <Sparkles className="h-3 w-3" />
             Analyzing...

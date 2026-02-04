@@ -4,26 +4,32 @@ import { useState } from "react";
 import { EcoDropzone } from "./eco-dropzone";
 import { EcoAgent } from "./eco-agent";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { type ParsedFileData } from "@/lib/actions/parse-file";
 
-export function DashboardClient() {
-  // State for handling file selection and processing
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+interface DashboardClientProps {
+  readonly onFilesParsed: (parsedFiles: ParsedFileData[]) => void;
+  readonly parsedFiles: ParsedFileData[];
+  readonly aiContext: string;
+}
+
+export function DashboardClient({ onFilesParsed, parsedFiles, aiContext }: DashboardClientProps) {
+  // State for handling file processing
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Handler for when files are selected in the dropzone
-  const handleFilesSelected = async (files: File[]) => {
+  const handleFilesSelected = (files: File[]) => {
     console.log("Files selected:", files.map(f => f.name));
-    setSelectedFiles(files);
+  };
+
+  // Handler for when files are parsed
+  const handleFilesParsed = (newParsedFiles: ParsedFileData[]) => {
+    setIsAnalyzing(true);
+    onFilesParsed(newParsedFiles);
     
-    if (files.length > 0) {
-      setIsAnalyzing(true);
-      // Here you could add logic to process/analyze the files
-      // For now, we'll just simulate processing
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        console.log("File analysis complete");
-      }, 2000);
-    }
+    // Simulate processing time for UI feedback
+    setTimeout(() => {
+      setIsAnalyzing(false);
+    }, 1000);
   };
 
   return (
@@ -39,9 +45,9 @@ export function DashboardClient() {
                   Processing...
                 </span>
               )}
-              {selectedFiles.length > 0 && !isAnalyzing && (
+              {parsedFiles.length > 0 && !isAnalyzing && (
                 <span className="inline-flex items-center rounded-full bg-emerald-accent/20 px-2 py-1 text-xs text-emerald-accent">
-                  {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} ready
+                  {parsedFiles.length} file{parsedFiles.length > 1 ? 's' : ''} processed
                 </span>
               )}
             </CardTitle>
@@ -52,6 +58,7 @@ export function DashboardClient() {
           <CardContent>
             <EcoDropzone 
               onFilesSelected={handleFilesSelected}
+              onFilesParsed={handleFilesParsed}
               disabled={isAnalyzing}
             />
           </CardContent>
@@ -62,7 +69,7 @@ export function DashboardClient() {
       <div>
         <Card className="h-full border-charcoal-800 bg-charcoal-900/50">
           <CardContent className="pt-6">
-            <EcoAgent />
+            <EcoAgent aiContext={aiContext} />
           </CardContent>
         </Card>
       </div>

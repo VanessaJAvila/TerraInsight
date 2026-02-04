@@ -1,95 +1,117 @@
-# TerraInsight 🌿
+# TerraInsight - EcoPulse AI
 
-**EcoPulse AI Dashboard** - Intelligent ecological impact analysis platform.
+An intelligent dashboard for ecological impact analysis with AI-powered sustainability workflow orchestration.
 
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-Latest-black?style=flat-square)](https://sdk.vercel.ai/)
+## 🌿 Features
 
-## 🌍 Overview
+- **Smart File Analysis**: Upload PDF/CSV energy and carbon reports for AI analysis
+- **Real-time Chat Agent**: Conversational AI that analyzes your ecological data
+- **n8n Integration**: Automatic workflow triggering when environmental anomalies are detected
+- **Premium UI**: Nature-inspired dark theme with professional Green-Tech design
+- **Accessibility First**: Full keyboard navigation and screen reader support
 
-TerraInsight is a high-performance Next.js 15 dashboard designed to bridge the gap between complex ecological data and actionable sustainability. By leveraging **Agentic Workflows**, the platform allows organizations to upload energy reports and carbon footprint data to receive real-time, AI-driven strategic recommendations.
-
-## ✨ Features
-
-- 🤖 **AI-Powered Analysis** - Real-time streaming chat with EcoPulse AI for deep ecological insights.
-- 📊 **Smart File Processing** - Seamless upload and parsing of CSV and PDF environmental reports.
-- 🌱 **Agentic Workflows** - Autonomous identification of anomalies with automated "Green Action" suggestions.
-- 🎨 **Modern UI/UX** - Premium dark-themed interface with emerald accents, built for professional sustainability officers.
-- ⚡ **Edge-Ready Performance** - Optimized with Next.js 15 App Router for maximum efficiency.
-
-## 🤖 AI Development Report (The "Accelerator" Factor)
-
-This project was built using an **AI-First Development Workflow**, demonstrating how Generative AI can accelerate senior-level delivery:
-
-- **IDE & Pair Programming:** Developed using **Cursor** with **Claude 3.5 Sonnet**.
-- **Architectural Decisions:** AI was utilized to architect the separation between Server and Client components, ensuring strict compliance with Next.js 15 patterns.
-- **Rapid Scaffolding:** Used Cursor's Composer to initialize the complex dashboard structure and Shadcn/UI integration in record time.
-- **Efficiency Gain:** Estimated **70% reduction** in boilerplate coding, allowing 100% focus on the Agentic logic and Sustainability UX.
-
-## 🧠 Agentic Workflow & Intelligence
-
-TerraInsight is not just a chat; it's an active agent.
-- **Custom Agent:** Defined in [AGENTS.md](./AGENTS.md).
-- **Function Calling:** The agent is equipped with tools to trigger external workflows (simulated via n8n) when ecological risks are detected.
-- **Streaming UI:** Uses Vercel AI SDK to provide a fluid, interactive experience.
-
-## 🚀 Tech Stack
-
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript (Strict Mode)
-- **AI Orchestration:** Vercel AI SDK
-- **Styling:** Tailwind CSS (Custom Ecological Theme)
-- **Components:** shadcn/ui (Radix UI)
-- **Icons:** Lucide React
-
-## 🛠️ Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 20.20+
-- npm / pnpm / yarn
+- Node.js 20+ installed
+- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
+- n8n instance running (optional but recommended)
 
 ### Installation
 
-1. **Clone & Enter:**
-   ```bash
-   git clone https://github.com/your-username/terrainsight.git
-   cd terrainsight
-
-   
-Install Dependencies:
-bash
-Copy
+```bash
+# Install dependencies
 npm install
-Environment Setup:
-Create a .env.local file:
-env
-Copy
-OPENAI_API_KEY=your_openai_api_key_here
-Launch:
-bash
-Copy
+
+# Set up environment variables
+cp .env.local.example .env.local
+# Edit .env.local and add your OPENAI_API_KEY
+
+# Start development server
 npm run dev
-📁 Project Structure
-text
-Copy
+```
+
+Visit `http://localhost:3000` to see TerraInsight in action!
+
+### n8n Integration Setup
+
+1. **Install n8n Desktop**: Download from [n8n.io/desktop](https://n8n.io/desktop)
+2. **Start n8n**: Launch n8n Desktop (default: http://localhost:5678)
+3. **Create Webhook**: Set up a webhook workflow listening at `/webhook-test/eco-action`
+4. **Test Integration**: Upload a report and watch EcoPulse AI trigger workflows automatically
+
+## 🛠️ Project Structure
+
+```
 src/
-├── app/                # Next.js App Router & API Routes
-│   ├── api/analyze     # File parsing & AI logic
-│   └── api/chat        # Vercel AI SDK streaming endpoint
+├── app/                    # Next.js 15 App Router
+│   ├── api/chat/          # AI chat endpoint with n8n integration
+│   ├── api/analyze/       # File analysis API
+│   └── page.tsx           # Main dashboard
 ├── components/
-│   ├── dashboard/      # Agentic UI & Dropzone components
-│   └── ui/             # Atomic Shadcn components
-├── lib/                # AI Tools & Sustainability logic
-└── hooks/              # Custom React hooks for UI state
+│   ├── dashboard/         # Dashboard components
+│   │   ├── eco-dropzone.tsx    # File upload with parsing
+│   │   ├── eco-agent.tsx       # AI chat interface
+│   │   └── sidebar.tsx         # Navigation sidebar
+│   └── ui/               # Shadcn/UI components
+└── lib/
+    ├── actions/          # Server actions for file parsing
+    └── utils/            # Utility functions
+```
 
+## 🤖 AI Capabilities
 
-🎨 Design System
-Primary: Emerald Green (#10b981) - Growth & Sustainability.
-Background: Deep Charcoal - Professionalism & Focus.
-Typography: DM Sans - Modern readability.
+EcoPulse AI automatically:
+- **Detects** energy consumption anomalies
+- **Identifies** waste inefficiencies  
+- **Quantifies** carbon emission patterns
+- **Triggers** n8n workflows for remediation
+- **Suggests** concrete sustainability actions
 
-Built with 💚 for a sustainable future.
+## 🔗 n8n Webhook Integration
 
-TerraInsight - Turning data into ecological action.
+When EcoPulse AI detects environmental issues, it sends a POST request to:
+```
+http://localhost:5678/webhook-test/eco-action
+```
+
+**Payload structure:**
+```json
+{
+  "action": "reduce_energy_consumption",
+  "details": "High energy usage detected in HVAC system during off-hours",
+  "priority": "high",
+  "timestamp": "2024-02-03T17:45:00.000Z",
+  "source": "EcoPulse AI",
+  "workflowId": "eco-1706981100000"
+}
+```
+
+## 🎨 Technology Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS with nature-inspired theme
+- **UI Components**: Shadcn/UI with custom Green-Tech styling
+- **AI**: Vercel AI SDK with OpenAI GPT-4
+- **File Processing**: PDF-parse & Papa Parse for report analysis
+- **Orchestration**: n8n webhook integration for sustainability workflows
+
+## 📊 Supported File Types
+
+- **PDF**: Energy reports, carbon assessments, sustainability audits
+- **CSV**: Energy consumption data, emissions data, waste tracking
+- **Excel**: XLSX/XLS files (basic text extraction)
+
+## 🌱 Environmental Impact
+
+TerraInsight helps organizations:
+- Reduce energy consumption by up to 30%
+- Identify waste reduction opportunities
+- Automate sustainability response workflows
+- Meet ESG reporting requirements
+- Achieve carbon neutrality goals
+
+## 📝 License
+
+MIT License - build amazing green-tech solutions! 🌍
