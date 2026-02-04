@@ -22,10 +22,22 @@ class PdfParseError extends Error {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function getWebhookConfigFromForm(formData: FormData): {
+  webhookUrl: string;
+  workflowEnabled: boolean;
+  environmentMode: string;
+} {
+  const webhookUrl = (formData.get("webhookUrl") as string)?.trim() || DEFAULT_WEBHOOK_URL;
+  const workflowEnabled = formData.get("workflowEnabled") === "true";
+  const environmentMode = (formData.get("environmentMode") as string) || "test";
+  return { webhookUrl, workflowEnabled, environmentMode };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
+    const webhookConfig = getWebhookConfigFromForm(formData);
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -38,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     for (const file of files) {
       try {
-        const result = await processFile(file);
+        const result = await processFile(file, webhookConfig);
         results.push(result);
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -74,7 +86,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processFile(file: File): Promise<AnalysisResult> {
+type WebhookConfig = { webhookUrl: string; workflowEnabled: boolean; environmentMode: string };
+
+async function processFile(file: File, webhookConfig: WebhookConfig): Promise<AnalysisResult> {
   const filename = file.name;
   const fileType = getFileType(filename);
   const fileSize = file.size;
@@ -107,8 +121,8 @@ async function processFile(file: File): Promise<AnalysisResult> {
   const energyEstimate = calculateFileEnergyEstimate(fileSize, anomaly.detected);
 
   let webhookTriggered = false;
-  if (anomaly.detected) {
-    webhookTriggered = await triggerWebhook(filename, anomaly);
+  if (anomaly.detected && webhookConfig.workflowEnabled) {
+    webhookTriggered = await triggerWebhook(filename, anomaly, webhookConfig);
   }
 
   return {
@@ -188,7 +202,11 @@ async function parseCSV(file: File): Promise<{ text: string; rowCount: number; h
 }
 
 
-async function triggerWebhook(filename: string, anomaly: AnomalyDetection): Promise<boolean> {
+async function triggerWebhook(
+  filename: string,
+  anomaly: AnomalyDetection,
+  config: WebhookConfig
+): Promise<boolean> {
   try {
     const payload = {
       action: 'investigate_file_anomaly',
@@ -199,12 +217,14 @@ async function triggerWebhook(filename: string, anomaly: AnomalyDetection): Prom
       recommendations: anomaly.recommendations,
     };
 
-    const response = await fetch(DEFAULT_WEBHOOK_URL, {
+    const url = config.webhookUrl || DEFAULT_WEBHOOK_URL;
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
+    console.log(`[EcoPulse] File analysis webhook | mode=${config.environmentMode} | url=${url} | status=${response.status}`);
     return response.ok;
   } catch (error) {
     console.error('Webhook trigger failed:', error);

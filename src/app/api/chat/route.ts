@@ -1,4 +1,4 @@
-import { streamText } from "ai";
+import { streamText, type CoreMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { DEFAULT_WEBHOOK_URL } from "@/lib/constants/analysis";
@@ -6,6 +6,12 @@ import { DEFAULT_WEBHOOK_URL } from "@/lib/constants/analysis";
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
+
+type WebhookConfig = {
+  webhookUrl?: string | null;
+  workflowEnabled?: boolean;
+  environmentMode?: string;
+};
 
 const SYSTEM_PROMPT = `You are EcoPulse AI, a professional sustainability consultant with expertise in environmental impact analysis.
 
@@ -45,40 +51,72 @@ COMMUNICATION STYLE:
 
 Example response: "I've analyzed your energy consumption report and detected a 35% spike in Building C during off-hours. This anomaly has been flagged and our sustainability team has been automatically alerted. Immediate actions: 1) Check HVAC timer settings, 2) Audit after-hours equipment usage, 3) Review security lighting efficiency."`;
 
-async function triggerWebhook(payload: any): Promise<string> {
+async function triggerWebhook(
+  payload: Record<string, unknown>,
+  config: WebhookConfig
+): Promise<string> {
+  const enabled = config.workflowEnabled === true;
+  if (!enabled) {
+    return `ℹ️ Workflow triggers are disabled in Agent Settings. No webhook was called. Enable "Workflow triggers" in Agent Settings to alert the team automatically.`;
+  }
+  const url = config.webhookUrl?.trim() || DEFAULT_WEBHOOK_URL;
+  const mode = config.environmentMode || "test";
   try {
-    const response = await fetch(DEFAULT_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
+    console.log(`[EcoPulse] Webhook triggered | mode=${mode} | url=${url} | status=${response.status}`);
     return response.ok
-      ? `✅ Sustainability workflow has been triggered successfully. The team has been alerted about this environmental issue and will take appropriate action.`
+      ? `✅ Sustainability workflow has been triggered successfully (${mode}). The team has been alerted about this environmental issue and will take appropriate action.`
       : `⚠️ Alert attempted but workflow trigger returned status ${response.status}. Please check the sustainability team dashboard.`;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[EcoPulse] Webhook trigger failed | mode=${mode} | url=${url}`, error);
     return `⚠️ Unable to trigger workflow (${errorMessage}). Please notify the sustainability team manually.`;
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { messages, aiContext } = await req.json();
-    
-    const systemMessage = `${SYSTEM_PROMPT}\n\nContext: ${aiContext?.trim() || 'No uploaded data available'}`;
+    const body = await req.json();
+    const {
+      messages,
+      aiContext,
+      webhookUrl,
+      workflowEnabled,
+      environmentMode,
+    } = body as {
+      messages?: unknown[];
+      aiContext?: string;
+      webhookUrl?: string | null;
+      workflowEnabled?: boolean;
+      environmentMode?: string;
+    };
+
+    const webhookConfig: WebhookConfig = {
+      webhookUrl: webhookUrl ?? null,
+      workflowEnabled: workflowEnabled === true,
+      environmentMode: environmentMode ?? "test",
+    };
+
+    const systemMessage = `${SYSTEM_PROMPT}\n\nContext: ${aiContext?.trim() || "No uploaded data available"}`;
 
     const result = await streamText({
       model: openai("gpt-4o-mini"),
       system: systemMessage,
-      messages,
+      messages: (messages ?? []) as CoreMessage[],
       tools: {
         triggerSustainabilityWorkflow: {
-          description: 'Trigger sustainability workflow when detecting environmental anomalies. ALWAYS continue conversation after using this tool.',
+          description:
+            "Trigger sustainability workflow when detecting environmental anomalies. ALWAYS continue conversation after using this tool.",
           parameters: z.object({
-            action: z.string().describe('The specific action or workflow to trigger'),
-            details: z.string().describe('Detailed description of the issue or opportunity'),
-            severity: z.enum(['low', 'medium', 'high']).describe('Priority level of the sustainability issue'),
+            action: z.string().describe("The specific action or workflow to trigger"),
+            details: z.string().describe("Detailed description of the issue or opportunity"),
+            severity: z
+              .enum(["low", "medium", "high"])
+              .describe("Priority level of the sustainability issue"),
           }),
           execute: async ({ action, details, severity }) => {
             const payload = {
@@ -87,9 +125,8 @@ export async function POST(req: Request) {
               severity,
               timestamp: new Date().toISOString(),
             };
-            
-            return await triggerWebhook(payload);
-          }
+            return await triggerWebhook(payload, webhookConfig);
+          },
         },
       },
       maxToolRoundtrips: 1,

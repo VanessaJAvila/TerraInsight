@@ -10,18 +10,37 @@ import { DEFAULT_WEBHOOK_URL } from '@/lib/constants/analysis';
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-export async function POST() {
+type WebhookConfig = { webhookUrl: string; workflowEnabled: boolean; environmentMode: string };
+
+export async function POST(request: Request) {
   try {
+    let webhookConfig: WebhookConfig = {
+      webhookUrl: DEFAULT_WEBHOOK_URL,
+      workflowEnabled: false,
+      environmentMode: "test",
+    };
+    try {
+      const body = await request.json().catch(() => ({}));
+      const url = (body.webhookUrl as string)?.trim();
+      const enabled = body.workflowEnabled === true;
+      const mode = (body.environmentMode as string) || "test";
+      if (url) webhookConfig.webhookUrl = url;
+      webhookConfig.workflowEnabled = enabled;
+      webhookConfig.environmentMode = mode;
+    } catch {
+      // no body or invalid JSON
+    }
+
     const syntheticData = generateSyntheticCriticalData();
     const csvContent = convertToCSV(syntheticData);
-    
+
     const syntheticFile = {
-      name: 'demo_critical_waste_analysis.csv',
-      size: Buffer.byteLength(csvContent, 'utf8'),
-      type: 'text/csv'
+      name: "demo_critical_waste_analysis.csv",
+      size: Buffer.byteLength(csvContent, "utf8"),
+      type: "text/csv",
     };
-    
-    const analysisResult = await analyzeSyntheticData(csvContent, syntheticFile);
+
+    const analysisResult = await analyzeSyntheticData(csvContent, syntheticFile, webhookConfig);
     
     return NextResponse.json({
       success: true,
@@ -104,24 +123,26 @@ function convertToCSV(data: SyntheticDataRow[]): string {
   return csvRows.join('\n');
 }
 
-async function analyzeSyntheticData(csvContent: string, fileInfo: any): Promise<AnalysisResult> {
-  const lines = csvContent.split('\n');
-  const headers = lines[0].split(',');
-  const dataRows = lines.slice(1).filter(line => line.trim());
-  
+async function analyzeSyntheticData(
+  csvContent: string,
+  fileInfo: { name: string; size: number; type: string },
+  webhookConfig: WebhookConfig
+): Promise<AnalysisResult> {
+  const lines = csvContent.split("\n");
+  const dataRows = lines.slice(1).filter((line) => line.trim());
   const metadata = {
     fileSize: fileInfo.size,
     rowCount: dataRows.length,
-    headers: headers.map(h => h.replaceAll('"', ''))
+    headers: (lines[0] || "").split(",").map((h) => h.replaceAll('"', "")),
   };
-  
+
   const anomaly = detectTextAnomalies(csvContent, metadata);
-  const summary = generateAnalysisSummary('csv', metadata, anomaly);
+  const summary = generateAnalysisSummary("csv", metadata, anomaly);
   const energyEstimate = calculateFileEnergyEstimate(fileInfo.size, anomaly.detected);
-  
+
   let webhookTriggered = false;
-  if (anomaly.detected) {
-    webhookTriggered = await triggerDemoWebhook(fileInfo.name, anomaly);
+  if (anomaly.detected && webhookConfig.workflowEnabled) {
+    webhookTriggered = await triggerDemoWebhook(fileInfo.name, anomaly, webhookConfig);
   }
   
   return {
@@ -137,27 +158,35 @@ async function analyzeSyntheticData(csvContent: string, fileInfo: any): Promise<
   };
 }
 
-async function triggerDemoWebhook(filename: string, anomaly: any): Promise<boolean> {
+async function triggerDemoWebhook(
+  filename: string,
+  anomaly: { issues: string[]; severity: string; recommendations: string[] },
+  config: WebhookConfig
+): Promise<boolean> {
   try {
     const payload = {
-      action: 'demo_critical_analysis',
-      details: `Synthetic critical waste analysis: ${filename} - ${anomaly.issues.join('; ')}`,
+      action: "demo_critical_analysis",
+      details: `Synthetic critical waste analysis: ${filename} - ${anomaly.issues.join("; ")}`,
       severity: anomaly.severity,
       timestamp: new Date().toISOString(),
-      source: 'agentic_demo_generation',
+      source: "agentic_demo_generation",
       issues: anomaly.issues,
       recommendations: anomaly.recommendations,
     };
 
-    const response = await fetch(DEFAULT_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const url = config.webhookUrl || DEFAULT_WEBHOOK_URL;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
+    console.log(
+      `[EcoPulse] Demo webhook | mode=${config.environmentMode} | url=${url} | status=${response.status}`
+    );
     return response.ok;
   } catch (error) {
-    console.error('Demo webhook trigger failed:', error);
+    console.error("Demo webhook trigger failed:", error);
     return false;
   }
 }

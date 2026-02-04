@@ -10,6 +10,7 @@ import {
   extractTokenUsage,
 } from "@/lib/utils/analysis";
 import { ENERGY_PER_TOKEN } from "@/lib/constants/analysis";
+import { getAgentSettingsForRequest } from "@/lib/agent-settings";
 import { saveReport } from "@/lib/stores/reports-store";
 
 const DEMO_RESPONSE_DELAY_MS = 1500;
@@ -47,6 +48,24 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
 
+  const chatBody = useMemo(() => {
+    const getSettings = () => getAgentSettingsForRequest();
+    return {
+      get aiContext() {
+        return aiContext ?? "";
+      },
+      get webhookUrl() {
+        return getSettings().webhookUrl;
+      },
+      get workflowEnabled() {
+        return getSettings().workflowEnabled;
+      },
+      get environmentMode() {
+        return getSettings().environmentMode;
+      },
+    };
+  }, [aiContext]);
+
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } =
     useChat({
       api: "/api/chat",
@@ -57,7 +76,7 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
           content: `🌿 **Welcome to EcoPulse AI**\n\nI'm your ecological impact analyst. I can help you:\n\n• Analyze carbon footprint from energy reports\n• Identify waste reduction opportunities\n• Suggest sustainability actions (triggers green workflows)\n• Compare emissions across periods\n\nUpload a report or ask me anything about your ecological impact.`,
         },
       ],
-      body: aiContext ? { aiContext } : {},
+      body: chatBody,
     });
 
   const { displayMessages, isExecutingTool } = useMemo(() => {
@@ -145,11 +164,13 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
 
   const handleDemoGeneration = async () => {
     setIsGeneratingDemo(true);
-    
+
     try {
-      const response = await fetch('/api/demo/generate-and-analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      const { webhookUrl, workflowEnabled, environmentMode } = getAgentSettingsForRequest();
+      const response = await fetch("/api/demo/generate-and-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl, workflowEnabled, environmentMode }),
       });
       
       const result = await response.json();

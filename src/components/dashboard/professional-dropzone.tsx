@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { AnalysisResult, FileProgress } from '@/lib/types/analysis';
 import { getSeverityColor, isValidFileType } from '@/lib/utils/analysis';
 import { PROGRESS_UPDATE_INTERVAL, PROGRESS_INCREMENT, PROGRESS_NEAR_COMPLETION } from '@/lib/constants/analysis';
+import { getAgentSettingsForRequest } from '@/lib/agent-settings';
 
 interface ProfessionalDropzoneProps {
   readonly onAnalysisComplete: (results: AnalysisResult[]) => void;
@@ -98,6 +99,10 @@ export function ProfessionalDropzone({
     try {
       const formData = new FormData();
       newFiles.forEach(file => formData.append('files', file));
+      const { webhookUrl, workflowEnabled, environmentMode } = getAgentSettingsForRequest();
+      formData.append('webhookUrl', webhookUrl);
+      formData.append('workflowEnabled', String(workflowEnabled));
+      formData.append('environmentMode', environmentMode);
 
       const progressInterval = setInterval(() => updateProgress(newFiles), PROGRESS_UPDATE_INTERVAL);
       const response = await fetch('/api/analyze', {
