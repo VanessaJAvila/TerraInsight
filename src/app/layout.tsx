@@ -21,6 +21,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body
         className={`${dmSans.variable} font-sans bg-charcoal-950 text-charcoal-100 min-h-screen antialiased`}
+        suppressHydrationWarning={true}
       >
         {children}
       </body>

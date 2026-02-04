@@ -23,7 +23,7 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
           content: `🌿 **Welcome to EcoPulse AI**\n\nI'm your ecological impact analyst. I can help you:\n\n• Analyze carbon footprint from energy reports\n• Identify waste reduction opportunities\n• Suggest sustainability actions (triggers green workflows)\n• Compare emissions across periods\n\nUpload a report or ask me anything about your ecological impact.`,
         },
       ],
-      body: aiContext ? { aiContext } : undefined,
+      body: aiContext ? { aiContext } : {},
     });
 
   useEffect(() => {
@@ -103,8 +103,9 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
           placeholder="Ask about carbon footprint, waste, or sustainability..."
           className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-900 px-4 py-2.5 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-emerald-accent focus:outline-none focus:ring-1 focus:ring-emerald-accent"
           disabled={isLoading}
+          suppressHydrationWarning={true}
         />
-        <Button type="submit" disabled={isLoading} size="icon">
+        <Button type="submit" disabled={isLoading} size="icon" suppressHydrationWarning={true}>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

@@ -220,6 +220,7 @@ export function EcoDropzone({
         onDrop={handleDrop}
         onKeyDown={handleKeyDown}
         onClick={handleButtonClick}
+        suppressHydrationWarning={true}
         className={cn(
           "relative w-full rounded-xl border-2 border-dashed p-12 text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-accent focus:ring-offset-2 focus:ring-offset-charcoal-950",
           isDragging
@@ -234,6 +235,7 @@ export function EcoDropzone({
           multiple
           onChange={handleFileInput}
           disabled={disabled}
+          suppressHydrationWarning={true}
           className="absolute inset-0 cursor-pointer opacity-0"
         />
         <Upload className="mx-auto mb-4 h-12 w-12 text-charcoal-500" />
