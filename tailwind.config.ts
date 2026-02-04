@@ -35,7 +35,6 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        // Nature-inspired palette
         charcoal: {
           50: "#f7f7f8",
           100: "#eeeef0",

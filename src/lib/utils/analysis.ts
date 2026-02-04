@@ -168,7 +168,13 @@ export function calculateChatEnergyConsumption(totalTokens: number): string {
   return kWh.toFixed(4);
 }
 
-export function extractTokenUsage(message: any): { totalTokens: number; estimated: boolean } {
+interface ChatMessage {
+  usage?: { totalTokens?: number };
+  content?: string;
+  role?: string;
+}
+
+export function extractTokenUsage(message: ChatMessage): { totalTokens: number; estimated: boolean } {
   if (message.usage?.totalTokens) {
     return { totalTokens: message.usage.totalTokens, estimated: false };
   }

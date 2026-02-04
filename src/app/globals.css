@@ -41,7 +41,6 @@
   }
 }
 
-/* Premium Green-Tech accents */
 .eco-glow {
   box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.25);
 }
@@ -50,10 +49,29 @@
   border-color: rgba(16, 185, 129, 0.3);
 }
 
-/* Subtle grid background */
 .eco-grid-bg {
   background-image: 
     linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* Chat messages scroll: always show scrollbar, stable layout */
+.chat-messages-scroll {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+.chat-messages-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-messages-scroll::-webkit-scrollbar-track {
+  background: hsl(180 6% 12%);
+  border-radius: 4px;
+}
+.chat-messages-scroll::-webkit-scrollbar-thumb {
+  background: hsl(180 6% 35%);
+  border-radius: 4px;
+}
+.chat-messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(180 6% 45%);
 }

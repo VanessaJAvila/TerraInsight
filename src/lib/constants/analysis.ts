@@ -1,5 +1,6 @@
 export const MAX_CONTEXT_LENGTH = 1000;
 export const MAX_SAMPLE_ROWS = 3;
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 export const PROGRESS_UPDATE_INTERVAL = 500;
 export const PROGRESS_INCREMENT = 10;
 export const PROGRESS_NEAR_COMPLETION = 90;

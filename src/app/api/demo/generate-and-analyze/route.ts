@@ -12,23 +12,17 @@ export const maxDuration = 30;
 
 export async function POST() {
   try {
-    // Generate synthetic critical waste CSV data in memory
     const syntheticData = generateSyntheticCriticalData();
-    
-    // Convert to CSV format
     const csvContent = convertToCSV(syntheticData);
     
-    // Create synthetic file metadata
     const syntheticFile = {
       name: 'demo_critical_waste_analysis.csv',
       size: Buffer.byteLength(csvContent, 'utf8'),
       type: 'text/csv'
     };
     
-    // Process with the same analysis logic used for uploads
     const analysisResult = await analyzeSyntheticData(csvContent, syntheticFile);
     
-    // Return the analysis result for the chat UI
     return NextResponse.json({
       success: true,
       message: 'Demo report generated and analyzed',
@@ -72,13 +66,10 @@ function generateSyntheticCriticalData(): SyntheticDataRow[] {
   const currentTime = new Date();
   const data: SyntheticDataRow[] = [];
   
-  // Generate 12 hours of critical consumption data
   for (let i = 0; i < 12; i++) {
     const timestamp = new Date(currentTime.getTime() - (i * 60 * 60 * 1000));
     const location = locations[i % locations.length];
-    
-    // Generate critical consumption values (800-1500 range)
-    const consumption = Math.floor(Math.random() * 700) + 800; // 800-1500
+    const consumption = Math.floor(Math.random() * 700) + 800;
     const energy_kwh = consumption * 0.28 + Math.random() * 50;
     const waste_kg = consumption * 0.08 + Math.random() * 20;
     const efficiency_score = Math.max(5, Math.floor((1000 - consumption) / 15) + Math.random() * 10);
@@ -114,7 +105,6 @@ function convertToCSV(data: SyntheticDataRow[]): string {
 }
 
 async function analyzeSyntheticData(csvContent: string, fileInfo: any): Promise<AnalysisResult> {
-  // Parse CSV content to extract metadata
   const lines = csvContent.split('\n');
   const headers = lines[0].split(',');
   const dataRows = lines.slice(1).filter(line => line.trim());
@@ -122,19 +112,13 @@ async function analyzeSyntheticData(csvContent: string, fileInfo: any): Promise<
   const metadata = {
     fileSize: fileInfo.size,
     rowCount: dataRows.length,
-    headers: headers.map(h => h.replaceAll(/"/g, ''))
+    headers: headers.map(h => h.replaceAll('"', ''))
   };
   
-  // Run anomaly detection on the synthetic data
   const anomaly = detectTextAnomalies(csvContent, metadata);
-  
-  // Generate summary
   const summary = generateAnalysisSummary('csv', metadata, anomaly);
-  
-  // Calculate energy estimate
   const energyEstimate = calculateFileEnergyEstimate(fileInfo.size, anomaly.detected);
   
-  // Trigger webhook if anomalies detected
   let webhookTriggered = false;
   if (anomaly.detected) {
     webhookTriggered = await triggerDemoWebhook(fileInfo.name, anomaly);

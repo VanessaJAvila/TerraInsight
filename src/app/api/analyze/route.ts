@@ -6,7 +6,18 @@ import {
   getFileType,
   calculateFileEnergyEstimate
 } from '@/lib/utils/analysis';
-import { DEFAULT_WEBHOOK_URL, MAX_SAMPLE_ROWS } from '@/lib/constants/analysis';
+import { DEFAULT_WEBHOOK_URL, MAX_FILE_SIZE_BYTES, MAX_SAMPLE_ROWS } from '@/lib/constants/analysis';
+
+class PdfParseError extends Error {
+  constructor(
+    message: string,
+    public readonly detail: string,
+    public readonly filename: string
+  ) {
+    super(message);
+    this.name = 'PdfParseError';
+  }
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,6 +41,8 @@ export async function POST(request: NextRequest) {
         const result = await processFile(file);
         results.push(result);
       } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errDetail = error instanceof PdfParseError ? error.detail : undefined;
         results.push({
           filename: file.name,
           status: 'error',
@@ -39,7 +52,7 @@ export async function POST(request: NextRequest) {
           anomaly: { detected: false, severity: 'low', issues: [], recommendations: [] },
           summary: 'Processing failed',
           energyEstimate: 0,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errDetail ? `${errMsg}: ${errDetail}` : errMsg,
         });
       }
     }
@@ -70,7 +83,14 @@ async function processFile(file: File): Promise<AnalysisResult> {
   let metadata: any = { fileSize };
 
   if (fileType === 'pdf') {
-    const pdfData = await parsePDF(file);
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      throw new Error(`File too large: max ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`);
+    }
+    const isPdf = file.type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      throw new Error('Invalid PDF: type or extension mismatch');
+    }
+    const pdfData = await parsePDF(file, filename);
     extractedText = pdfData.text;
     metadata.pageCount = pdfData.pageCount;
   } else if (fileType === 'csv') {
@@ -104,16 +124,31 @@ async function processFile(file: File): Promise<AnalysisResult> {
   };
 }
 
-async function parsePDF(file: File): Promise<{ text: string; pageCount: number }> {
-  const pdfParse = (await import('pdf-parse')).default;
-  
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const data = await pdfParse(buffer);
-  
-  return {
-    text: data.text,
-    pageCount: data.numpages,
-  };
+async function parsePDF(file: File, filename: string): Promise<{ text: string; pageCount: number }> {
+  let data: ArrayBuffer;
+  try {
+    data = await file.arrayBuffer();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to read file';
+    console.error(`PDF parse failed: ${filename} - ${msg}`);
+    throw new PdfParseError('Failed to read PDF file', msg, filename);
+  }
+
+  const { extractText, getDocumentProxy } = await import('unpdf');
+
+  try {
+    const pdf = await getDocumentProxy(new Uint8Array(data));
+    const { totalPages, text } = await extractText(pdf, { mergePages: true });
+    console.log(`PDF parsed OK: ${filename} (${text?.length ?? 0} chars)`);
+    return {
+      text: text ?? '',
+      pageCount: totalPages ?? 0,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown parse error';
+    console.error(`PDF parse failed: ${filename} - ${msg}`, err);
+    throw new PdfParseError('PDF parsing failed', msg, filename);
+  }
 }
 
 async function parseCSV(file: File): Promise<{ text: string; rowCount: number; headers: string[] }> {

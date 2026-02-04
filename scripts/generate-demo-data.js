@@ -1,168 +1,220 @@
 #!/usr/bin/env node
+/**
+ * TerraInsight Demo Data Generator
+ *
+ * Generates CSV and PDF demo files for testing the analysis pipeline.
+ * Requires: pdfkit, @faker-js/faker
+ * Install: npm install pdfkit @faker-js/faker
+ */
 
-const fs = require('fs');
-const path = require('path');
-const PDFDocument = require('pdfkit');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const DEMO_DATA_DIR = path.join(__dirname, '..', 'demo-data');
+const ROOT = path.join(__dirname, '..');
+const PKG_PATH = path.join(ROOT, 'package.json');
+const DEMO_ROOT = path.join(ROOT, 'demo-data');
+const CSV_DIR = path.join(DEMO_ROOT, 'csv');
+const PDF_DIR = path.join(DEMO_ROOT, 'pdf');
 
-// Ensure demo-data directory exists
-if (!fs.existsSync(DEMO_DATA_DIR)) {
-  fs.mkdirSync(DEMO_DATA_DIR, { recursive: true });
-  console.log('✅ Created demo-data directory');
+function ensureDirs() {
+  [DEMO_ROOT, CSV_DIR, PDF_DIR].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created ${path.relative(ROOT, dir)}`);
+    }
+  });
 }
 
-// Generate CSV files
-function generateCSV(filename, data) {
-  const headers = ['timestamp', 'location', 'consumption', 'energy_kwh', 'waste_kg', 'efficiency_score'];
-  const csvContent = [
-    headers.join(','),
-    ...data.map(row => row.join(','))
-  ].join('\n');
-
-  const filePath = path.join(DEMO_DATA_DIR, filename);
-  fs.writeFileSync(filePath, csvContent);
-  console.log(`✅ Generated ${filename}`);
+function isEsmProject() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(PKG_PATH, 'utf8'));
+    return pkg.type === 'module';
+  } catch {
+    return false;
+  }
 }
 
-// Generate green report (all values < 80)
-const greenData = [
-  ['2024-01-15T08:00:00Z', 'Block A', 45, 12.5, 2.1, 85],
-  ['2024-01-15T09:00:00Z', 'Block A', 52, 15.2, 1.8, 88],
-  ['2024-01-15T10:00:00Z', 'Block B', 38, 11.1, 1.5, 92],
-  ['2024-01-15T11:00:00Z', 'Block B', 41, 12.8, 1.9, 89],
-  ['2024-01-15T12:00:00Z', 'Block C', 67, 18.9, 3.2, 78],
-  ['2024-01-15T13:00:00Z', 'Block C', 72, 19.8, 2.8, 75],
-  ['2024-01-15T14:00:00Z', 'Parking', 15, 4.2, 0.5, 95],
-  ['2024-01-15T15:00:00Z', 'Parking', 18, 5.1, 0.8, 93],
-];
+function loadDeps() {
+  let PDFDocument;
 
-generateCSV('green_report.csv', greenData);
+  try {
+    PDFDocument = require('pdfkit');
+  } catch (err) {
+    console.error('Missing pdfkit. Run: npm install pdfkit @faker-js/faker', err);
+    process.exit(1);
+  }
 
-// Generate anomaly report (values > 150)
-const anomalyData = [
-  ['2024-01-16T08:00:00Z', 'Block A', 95, 28.5, 4.1, 65],
-  ['2024-01-16T09:00:00Z', 'Block A', 180, 52.3, 8.7, 45],
-  ['2024-01-16T10:00:00Z', 'Block B', 78, 22.1, 3.5, 71],
-  ['2024-01-16T11:00:00Z', 'Block B', 165, 48.8, 9.2, 42],
-  ['2024-01-16T12:00:00Z', 'Block C', 89, 25.9, 4.8, 68],
-  ['2024-01-16T13:00:00Z', 'Block C', 95, 27.8, 5.2, 66],
-  ['2024-01-16T14:00:00Z', 'HVAC System', 220, 78.9, 12.5, 28],
-  ['2024-01-16T15:00:00Z', 'HVAC System', 195, 68.2, 11.1, 35],
-];
-
-generateCSV('anomaly_report.csv', anomalyData);
-
-// Generate critical waste report (values > 500)
-const criticalData = [
-  ['2024-01-17T08:00:00Z', 'Industrial Unit A', 650, 189.5, 45.2, 15],
-  ['2024-01-17T09:00:00Z', 'Industrial Unit A', 720, 210.8, 52.1, 12],
-  ['2024-01-17T10:00:00Z', 'Manufacturing Floor', 580, 168.9, 38.7, 22],
-  ['2024-01-17T11:00:00Z', 'Manufacturing Floor', 890, 245.6, 68.9, 8],
-  ['2024-01-17T12:00:00Z', 'Cooling System', 1200, 385.2, 89.5, 5],
-  ['2024-01-17T13:00:00Z', 'Cooling System', 1150, 362.8, 82.1, 6],
-  ['2024-01-17T14:00:00Z', 'Block C Critical', 750, 225.5, 58.9, 18],
-  ['2024-01-17T15:00:00Z', 'Block C Critical', 680, 198.7, 48.2, 20],
-];
-
-generateCSV('critical_waste.csv', criticalData);
-
-// Generate actual PDF file
-function generatePDF() {
-  const doc = new PDFDocument();
-  const pdfPath = path.join(DEMO_DATA_DIR, 'sustainability_summary.pdf');
-  
-  doc.pipe(fs.createWriteStream(pdfPath));
-  
-  // Header
-  doc.fontSize(20).font('Helvetica-Bold').text('SUSTAINABILITY SUMMARY REPORT', 50, 50);
-  doc.fontSize(12).font('Helvetica').text('Date: January 2024 | Location: Corporate Campus | Report ID: ENV-2024-001', 50, 80);
-  
-  // Draw line
-  doc.moveTo(50, 100).lineTo(550, 100).stroke();
-  
-  // Executive Summary
-  doc.fontSize(16).font('Helvetica-Bold').text('EXECUTIVE SUMMARY', 50, 120);
-  doc.fontSize(11).font('Helvetica')
-     .text('This report summarizes energy consumption and waste management findings across our corporate campus for January 2024.', 50, 150, { width: 500 });
-  
-  // Key Findings
-  doc.fontSize(14).font('Helvetica-Bold').text('KEY FINDINGS:', 50, 190);
-  
-  doc.fontSize(11).font('Helvetica-Bold').text('1. ENERGY CONSUMPTION ANALYSIS', 50, 220);
-  doc.font('Helvetica')
-     .text('• Overall consumption increased by 15% compared to December 2023', 70, 240)
-     .text('• Block A: Normal operations within acceptable parameters', 70, 255)
-     .text('• Block B: Slight increase in HVAC usage due to weather conditions', 70, 270)
-     .text('• Block C: CRITICAL - Excessive energy waste detected', 70, 285);
-  
-  doc.fontSize(11).font('Helvetica-Bold').text('2. BLOCK C ENERGY WASTE ISSUES', 50, 315);
-  doc.font('Helvetica')
-     .text('• Consumption levels 40% above baseline during off-hours', 70, 335)
-     .text('• HVAC system running continuously despite building vacancy', 70, 350)
-     .text('• Lighting systems active 24/7 in unoccupied areas', 70, 365)
-     .text('• Server room cooling inefficiency detected', 70, 380);
-  
-  doc.fontSize(11).font('Helvetica-Bold').text('3. ENVIRONMENTAL IMPACT', 50, 410);
-  doc.font('Helvetica')
-     .text('• CO2 emissions increased by 12% due to Block C waste', 70, 430)
-     .text('• Estimated annual waste cost: €45,000 if not addressed', 70, 445)
-     .text('• Sustainability score dropped from 85 to 68', 70, 460);
-  
-  // Recommendations section
-  doc.addPage();
-  doc.fontSize(16).font('Helvetica-Bold').text('RECOMMENDATIONS', 50, 50);
-  
-  doc.fontSize(12).font('Helvetica-Bold').text('IMMEDIATE ACTIONS (Block C):', 50, 80);
-  doc.fontSize(11).font('Helvetica')
-     .text('• Install smart thermostats with occupancy sensors', 70, 100)
-     .text('• Implement automated lighting controls', 70, 115)
-     .text('• Audit server room cooling systems', 70, 130)
-     .text('• Schedule HVAC maintenance and optimization', 70, 145);
-  
-  // Critical Alert Box
-  doc.rect(50, 180, 500, 100).fillAndStroke('#ffebee', '#d32f2f');
-  doc.fillColor('#d32f2f').fontSize(14).font('Helvetica-Bold')
-     .text('⚠️ CRITICAL ALERT: BLOCK C ENERGY WASTE', 70, 200);
-  doc.fillColor('black').fontSize(11).font('Helvetica')
-     .text('Block C shows excessive energy consumption patterns indicating', 70, 220)
-     .text('significant environmental waste. Immediate action required.', 70, 235)
-     .text('Priority Level: HIGH | Est. Annual Cost Impact: €45,000', 70, 255);
-  
-  // Monitoring Metrics
-  doc.fontSize(14).font('Helvetica-Bold').text('MONITORING METRICS', 50, 310);
-  doc.fontSize(11).font('Helvetica')
-     .text('Current sustainability scores:', 50, 340)
-     .text('• Block A: 88/100 (EXCELLENT)', 70, 360)
-     .text('• Block B: 82/100 (GOOD)', 70, 375)
-     .text('• Block C: 45/100 (CRITICAL - NEEDS IMMEDIATE ACTION)', 70, 390)
-     .text('• Overall Campus: 68/100 (REQUIRES IMPROVEMENT)', 70, 405);
-  
-  // Footer
-  doc.fontSize(10).font('Helvetica')
-     .text('Contact: sustainability@company.com | Next Review: February 15, 2024', 50, 450)
-     .text('This document contains sensitive environmental data. Handle according to company confidentiality policies.', 50, 470);
-  
-  doc.end();
-  console.log('✅ Generated sustainability_summary.pdf');
+  return {
+    PDFDocument,
+    loadFaker: async () => {
+      try {
+        const mod = await import('@faker-js/faker');
+        return mod.faker;
+      } catch (err) {
+        console.error('Missing @faker-js/faker. Run: npm install pdfkit @faker-js/faker', err);
+        process.exit(1);
+      }
+    },
+  };
 }
 
-generatePDF();
+function generateGreenReport(faker) {
+  const count = faker.number.int({ min: 10, max: 20 });
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    rows.push({
+      id: faker.string.uuid(),
+      location: faker.company.name(),
+      consumption: faker.number.int({ min: 10, max: 79 }),
+      date: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
+    });
+  }
+  return rows;
+}
 
-// For a real PDF, you would need a library like PDFKit
-console.log('\n📋 DEMO DATA GENERATION COMPLETE!');
-console.log(`📁 Files created in: ${DEMO_DATA_DIR}`);
-console.log(`
-📊 Generated files:
-  • green_report.csv (normal consumption < 80)
-  • anomaly_report.csv (high consumption > 150) 
-  • critical_waste.csv (critical values > 500)
-  • sustainability_summary.pdf (Block C energy waste report)
+function generateAnomalyReport(faker) {
+  const count = faker.number.int({ min: 10, max: 20 });
+  const rows = [];
+  const anomalyIndices = new Set();
+  while (anomalyIndices.size < 2) {
+    anomalyIndices.add(faker.number.int({ min: 0, max: count - 1 }));
+  }
+  for (let i = 0; i < count; i++) {
+    const consumption = anomalyIndices.has(i)
+      ? faker.number.int({ min: 151, max: 280 })
+      : faker.number.int({ min: 40, max: 140 });
+    rows.push({
+      id: faker.string.uuid(),
+      location: faker.company.name(),
+      consumption,
+      date: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
+    });
+  }
+  return rows;
+}
 
-🧪 TEST THE SYSTEM:
-  1. Start your dev server: npm run dev
-  2. Upload these files to test anomaly detection
-  3. Ask the AI: "What did you find in that report?"
+function generateCriticalWaste(faker) {
+  const count = faker.number.int({ min: 5, max: 10 });
+  const rows = [];
+  const criticalIndex = faker.number.int({ min: 0, max: count - 1 });
+  for (let i = 0; i < count; i++) {
+    const consumption = i === criticalIndex
+      ? faker.number.int({ min: 501, max: 800 })
+      : faker.number.int({ min: 350, max: 480 });
+    rows.push({
+      id: faker.string.uuid(),
+      location: faker.company.name(),
+      consumption,
+      date: faker.date.recent({ days: 14 }).toISOString().slice(0, 10),
+    });
+  }
+  return rows;
+}
 
-✅ Real PDF generated using PDFKit!
-`);
+function writeCSV(filepath, rows) {
+  const headers = ['id', 'location', 'consumption', 'date'];
+  const lines = [headers.join(',')];
+  for (const row of rows) {
+    lines.push([row.id, `"${row.location}"`, row.consumption, row.date].join(','));
+  }
+  fs.writeFileSync(filepath, lines.join('\n'));
+}
+
+function writeSustainabilitySummary(PDFDocument, fs, faker, filepath) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const stream = fs.createWriteStream(filepath);
+    doc.pipe(stream);
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+
+    const reportDate = faker.date.recent({ days: 60 }).toISOString().slice(0, 10);
+    doc.fontSize(20).font('Helvetica-Bold').text('Sustainability Summary Report', 50, 50);
+    doc.fontSize(11).font('Helvetica')
+      .text(`Report ID: ${faker.string.alphanumeric(10).toUpperCase()} | Date: ${reportDate}`, 50, 80);
+    doc.moveTo(50, 100).lineTo(550, 100).stroke();
+    doc.fontSize(14).font('Helvetica-Bold').text('Executive Summary', 50, 120);
+    doc.fontSize(11).font('Helvetica')
+      .text('This report provides an overview of energy consumption and sustainability metrics across our facilities. All monitored zones are operating within expected parameters.', 50, 150, { width: 500 });
+    doc.fontSize(12).font('Helvetica-Bold').text('Key Metrics', 50, 220);
+    doc.font('Helvetica')
+      .text('• Average consumption: 62 kWh (within baseline)', 70, 250)
+      .text('• Carbon intensity: 0.28 kg CO2/kWh', 70, 270)
+      .text('• Renewable energy share: 34%', 70, 290);
+    doc.fontSize(10).font('Helvetica')
+      .text(`Contact: sustainability@company.com | Next review: ${faker.date.soon({ days: 30 }).toISOString().slice(0, 10)}`, 50, 400);
+    doc.end();
+  });
+}
+
+function writeAuditReportCritical(PDFDocument, fs, faker, filepath) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const stream = fs.createWriteStream(filepath);
+    doc.pipe(stream);
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+
+    const reportDate = faker.date.recent({ days: 7 }).toISOString().slice(0, 10);
+    const criticalValue = faker.number.int({ min: 500, max: 650 });
+    doc.fontSize(20).font('Helvetica-Bold').text('Audit Report — Critical Findings', 50, 50);
+    doc.fontSize(11).font('Helvetica')
+      .text(`Audit ID: AUD-${faker.string.numeric(6)} | Date: ${reportDate}`, 50, 80);
+    doc.moveTo(50, 100).lineTo(550, 100).stroke();
+    doc.fontSize(14).font('Helvetica-Bold').text('Findings', 50, 120);
+    doc.fontSize(11).font('Helvetica')
+      .text('During the facility audit, several areas were inspected. Block C was identified as requiring immediate attention due to elevated consumption levels.', 50, 150, { width: 500 });
+    doc.fontSize(12).font('Helvetica-Bold').text('Block C — Critical Alert', 50, 230);
+    doc.rect(50, 255, 500, 55).fillAndStroke('#ffebee', '#d32f2f');
+    doc.fillColor('#b71c1c').fontSize(12).font('Helvetica-Bold')
+      .text(`Consumption: ${criticalValue} kWh — CRITICAL`, 70, 275);
+    doc.fillColor('black').fontSize(11).font('Helvetica')
+      .text('Block C exceeds baseline by 42%. Immediate investigation recommended.', 70, 295);
+    doc.fontSize(11).font('Helvetica')
+      .text('Recommended actions: Review HVAC settings, audit after-hours equipment, and verify lighting controls.', 50, 340, { width: 500 });
+    doc.fontSize(10).font('Helvetica')
+      .text('This is an automated audit report. Escalate to facilities management.', 50, 450);
+    doc.end();
+  });
+}
+
+async function run() {
+  console.log('TerraInsight Demo Data Generator\n');
+  const isEsm = isEsmProject();
+  console.log(`Project type: ${isEsm ? 'ESM' : 'CommonJS'}`);
+
+  ensureDirs();
+  const { PDFDocument, loadFaker } = loadDeps();
+  const faker = await loadFaker();
+
+  const greenRows = generateGreenReport(faker);
+  writeCSV(path.join(CSV_DIR, 'green_report.csv'), greenRows);
+  console.log(`Generated green_report.csv (${greenRows.length} records, consumption < 80)`);
+
+  const anomalyRows = generateAnomalyReport(faker);
+  writeCSV(path.join(CSV_DIR, 'anomaly_report.csv'), anomalyRows);
+  console.log(`Generated anomaly_report.csv (${anomalyRows.length} records, ≥2 with consumption > 150)`);
+
+  const criticalRows = generateCriticalWaste(faker);
+  writeCSV(path.join(CSV_DIR, 'critical_waste.csv'), criticalRows);
+  console.log(`Generated critical_waste.csv (${criticalRows.length} records, ≥1 with consumption > 500)`);
+
+  await writeSustainabilitySummary(PDFDocument, fs, faker, path.join(PDF_DIR, 'sustainability_summary.pdf'));
+  console.log('Generated sustainability_summary.pdf (no anomalies)');
+
+  await writeAuditReportCritical(PDFDocument, fs, faker, path.join(PDF_DIR, 'audit_report_critical.pdf'));
+  console.log('Generated audit_report_critical.pdf (Block C, critical, large value)');
+
+  console.log(`\nDemo data complete. Output: ${DEMO_ROOT}`);
+  console.log('Upload files from demo-data/csv and demo-data/pdf to test the analysis route.');
+}
+
+// Top-level await requires ESM; script runs as CommonJS
+(async () => { // NOSONAR
+  try {
+    await run();
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+})();

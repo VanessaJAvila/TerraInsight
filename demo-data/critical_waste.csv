@@ -1,9 +1,0 @@
-timestamp,location,consumption,energy_kwh,waste_kg,efficiency_score
-2024-01-17T08:00:00Z,Industrial Unit A,650,189.5,45.2,15
-2024-01-17T09:00:00Z,Industrial Unit A,720,210.8,52.1,12
-2024-01-17T10:00:00Z,Manufacturing Floor,580,168.9,38.7,22
-2024-01-17T11:00:00Z,Manufacturing Floor,890,245.6,68.9,8
-2024-01-17T12:00:00Z,Cooling System,1200,385.2,89.5,5
-2024-01-17T13:00:00Z,Cooling System,1150,362.8,82.1,6
-2024-01-17T14:00:00Z,Block C Critical,750,225.5,58.9,18
-2024-01-17T15:00:00Z,Block C Critical,680,198.7,48.2,20

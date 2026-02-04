@@ -24,9 +24,23 @@ export interface AnalysisResult {
 }
 
 export interface FileProgress {
+  id: string;
   file: File;
   status: 'pending' | 'analyzing' | 'success' | 'error';
   progress: number;
   result?: AnalysisResult;
   error?: string;
+}
+
+export interface StoredReport {
+  id: string;
+  createdAt: string;
+  source: 'manual' | 'synthetic';
+  result: AnalysisResult;
+  generatedData?: {
+    filename: string;
+    recordCount: number;
+    criticalValues: number;
+    maxConsumption: number;
+  };
 }

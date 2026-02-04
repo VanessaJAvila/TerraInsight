@@ -5,28 +5,38 @@ import { useRef, useEffect, useMemo, useState } from "react";
 import { Send, Bot, Sparkles, Loader2, Zap, Leaf, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { calculateChatEnergyConsumption } from "@/lib/utils/analysis";
+import {
+  calculateChatEnergyConsumption,
+  extractTokenUsage,
+} from "@/lib/utils/analysis";
+import { ENERGY_PER_TOKEN } from "@/lib/constants/analysis";
+import { saveReport } from "@/lib/stores/reports-store";
 
-const ENERGY_PER_TOKEN = 0.0001;
-const CHARS_PER_TOKEN_ESTIMATE = 4;
+const DEMO_RESPONSE_DELAY_MS = 1500;
 
-function calculateEnergyConsumption(totalTokens: number): string {
-  if (!totalTokens || totalTokens <= 0) return "0.0000";
-  const kWh = totalTokens * ENERGY_PER_TOKEN;
-  return kWh.toFixed(4);
-}
+function buildDemoSummaryContent(result: {
+  result: { anomaly: { detected: boolean; issues: string[] }; webhookTriggered?: boolean };
+  generatedData: { filename: string; recordCount: number; criticalValues: number; maxConsumption: number };
+}): string {
+  const { result: analysis, generatedData } = result;
+  const anomalyLine = analysis.anomaly.detected
+    ? `🔍 **Issues**: ${analysis.anomaly.issues.join('; ')}`
+    : '';
+  const workflowLine = analysis.webhookTriggered
+    ? '✅ **Workflow Triggered**: n8n automation activated'
+    : '';
+  return `🎯 **Agentic Analysis Complete!**
 
-function extractTokenUsage(message: any): { totalTokens: number; estimated: boolean } {
-  if (message.usage?.totalTokens) {
-    return { totalTokens: message.usage.totalTokens, estimated: false };
-  }
-  
-  if (message.content && message.role === 'assistant') {
-    const estimatedTokens = Math.ceil(message.content.length / CHARS_PER_TOKEN_ESTIMATE);
-    return { totalTokens: estimatedTokens, estimated: true };
-  }
-  
-  return { totalTokens: 0, estimated: false };
+📋 **Generated Report**: ${generatedData.filename}
+📊 **Records Analyzed**: ${generatedData.recordCount} data points
+🚨 **Critical Values Found**: ${generatedData.criticalValues} entries
+📈 **Peak Consumption**: ${generatedData.maxConsumption} kWh
+
+⚠️ **Anomalies Detected**: ${analysis.anomaly.detected ? 'YES' : 'NO'}
+${anomalyLine}
+${workflowLine}
+
+💡 You can now ask: "What did you find in the synthetic report?"`;
 }
 
 interface EcoAgentProps {
@@ -35,7 +45,6 @@ interface EcoAgentProps {
 
 export function EcoAgent({ aiContext }: EcoAgentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [sessionEnergy, setSessionEnergy] = useState(0);
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } =
@@ -69,26 +78,75 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
     };
   }, [messages, isLoading]);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastScrollAtRef = useRef(0);
+  const SCROLL_THROTTLE_MS = 120;
+
+  // Scroll to bottom: throttled so streaming doesn't cause header/scrollbar jitter
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesEndRef.current;
+    if (!el) return;
+    const now = Date.now();
+    const elapsed = now - lastScrollAtRef.current;
+    const runScroll = () => {
+      lastScrollAtRef.current = Date.now();
+      el.scrollIntoView({ behavior: "auto", block: "end" });
+    };
+    if (elapsed >= SCROLL_THROTTLE_MS || lastScrollAtRef.current === 0) {
+      runScroll();
+    } else {
+      scrollThrottleRef.current ??= setTimeout(runScroll, SCROLL_THROTTLE_MS - elapsed);
+    }
+    return () => {
+      if (scrollThrottleRef.current !== null) {
+        clearTimeout(scrollThrottleRef.current);
+        scrollThrottleRef.current = null;
+      }
+    };
   }, [displayMessages]);
 
-  useEffect(() => {
-    const totalEnergy = displayMessages
-      .filter(m => m.role === 'assistant' && m.id !== 'welcome')
+  // Debounce session energy so header doesn't jump during streaming
+  const energyValue = useMemo(() => {
+    return displayMessages
+      .filter((m) => m.role === 'assistant' && m.id !== 'welcome')
       .reduce((total, m) => {
         const usage = extractTokenUsage(m);
-        return total + (usage.totalTokens * 0.0001);
+        return total + usage.totalTokens * ENERGY_PER_TOKEN;
       }, 0);
-    
-    setSessionEnergy(totalEnergy);
   }, [displayMessages]);
+
+  const [sessionEnergy, setSessionEnergy] = useState(0);
+  useEffect(() => {
+    if (!isLoading) {
+      setSessionEnergy(energyValue);
+      return;
+    }
+    const t = setTimeout(() => setSessionEnergy(energyValue), 400);
+    return () => clearTimeout(t);
+  }, [energyValue, isLoading]);
+
+  let statusBadge: React.ReactNode = null;
+  if (isExecutingTool) {
+    statusBadge = (
+      <span className="flex items-center gap-1.5 rounded-full bg-green-500/20 px-2.5 py-1 text-xs text-green-400 whitespace-nowrap">
+        <Zap className="h-3 w-3 shrink-0 animate-pulse" />
+        Processing Action...
+      </span>
+    );
+  } else if (isLoading) {
+    statusBadge = (
+      <span className="flex items-center gap-1.5 rounded-full bg-emerald-accent/10 px-2.5 py-1 text-xs text-emerald-accent whitespace-nowrap">
+        <Sparkles className="h-3 w-3 shrink-0" />
+        Analyzing...
+      </span>
+    );
+  }
 
   const handleDemoGeneration = async () => {
     setIsGeneratingDemo(true);
     
     try {
-      // Call the demo API
       const response = await fetch('/api/demo/generate-and-analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -97,33 +155,15 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
       const result = await response.json();
       
       if (result.success) {
-        // Create summary message
-        const summaryContent = `🎯 **Agentic Analysis Complete!**
-
-📋 **Generated Report**: ${result.generatedData.filename}
-📊 **Records Analyzed**: ${result.generatedData.recordCount} data points
-🚨 **Critical Values Found**: ${result.generatedData.criticalValues} entries
-📈 **Peak Consumption**: ${result.generatedData.maxConsumption} kWh
-
-⚠️ **Anomalies Detected**: ${result.result.anomaly.detected ? 'YES' : 'NO'}
-${result.result.anomaly.detected ? `🔍 **Issues**: ${result.result.anomaly.issues.join('; ')}` : ''}
-${result.result.webhookTriggered ? '✅ **Workflow Triggered**: n8n automation activated' : ''}
-
-💡 You can now ask: "What did you find in the synthetic report?"`;
-
-        // Simulate the agent responding with the summary
+        saveReport(result.result, "synthetic", result.generatedData);
+        const summaryContent = buildDemoSummaryContent(result);
         append({
           role: 'user',
-          content: 'Generate and analyze a demo critical waste report'
+          content: 'Generate and analyze a demo critical waste report',
         });
-        
-        // The summary will be shown through the normal chat flow
         setTimeout(() => {
-          append({
-            role: 'assistant', 
-            content: summaryContent
-          });
-        }, 1500);
+          append({ role: 'assistant', content: summaryContent });
+        }, DEMO_RESPONSE_DELAY_MS);
         
       } else {
         append({
@@ -144,13 +184,13 @@ ${result.result.webhookTriggered ? '✅ **Workflow Triggered**: n8n automation a
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-accent/20">
+    <div className="flex h-full flex-col min-h-0">
+      <div className="mb-4 flex shrink-0 items-center justify-between min-h-[52px] gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-accent/20">
             <Bot className="h-4 w-4 text-emerald-accent" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-charcoal-100">
               AI Eco-Agent
             </h3>
@@ -159,29 +199,21 @@ ${result.result.webhookTriggered ? '✅ **Workflow Triggered**: n8n automation a
             </p>
           </div>
         </div>
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 min-w-[140px] justify-end">
           {sessionEnergy > 0 && (
-            <div className="flex items-center gap-1 rounded-full bg-emerald-accent/10 px-2 py-0.5 text-xs text-emerald-accent/80">
-              <Leaf className="h-3 w-3" />
+            <div className="flex items-center gap-1 rounded-full bg-emerald-accent/10 px-2 py-0.5 text-xs text-emerald-accent/80 tabular-nums">
+              <Leaf className="h-3 w-3 shrink-0" />
               <span>{sessionEnergy.toFixed(4)} kWh</span>
             </div>
           )}
-          
-          {isExecutingTool ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-green-500/20 px-2.5 py-1 text-xs text-green-400">
-              <Zap className="h-3 w-3 animate-pulse" />
-              Processing Action...
-            </span>
-          ) : isLoading && (
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-accent/10 px-2.5 py-1 text-xs text-emerald-accent">
-              <Sparkles className="h-3 w-3" />
-              Analyzing...
-            </span>
-          )}
+          {statusBadge}
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto rounded-lg border border-charcoal-800 bg-charcoal-950/50 p-4 min-h-[280px] max-h-[400px]">
+      <div
+        ref={scrollContainerRef}
+        className="chat-messages-scroll flex-1 min-h-0 space-y-4 rounded-lg border border-charcoal-800 bg-charcoal-950/50 p-4 overflow-y-scroll"
+      >
         {displayMessages.map((m) => (
           <div
             key={m.id}
@@ -273,7 +305,6 @@ ${result.result.webhookTriggered ? '✅ **Workflow Triggered**: n8n automation a
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Magic Button */}
       <div className="mt-4 mb-3">
         <Button
           onClick={handleDemoGeneration}

@@ -1,8 +1,7 @@
 import { streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
-
-const WEBHOOK_URL = 'http://localhost:5680/webhook-test/eco-action';
+import { DEFAULT_WEBHOOK_URL } from "@/lib/constants/analysis";
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
@@ -48,7 +47,7 @@ Example response: "I've analyzed your energy consumption report and detected a 3
 
 async function triggerWebhook(payload: any): Promise<string> {
   try {
-    const response = await fetch(WEBHOOK_URL, {
+    const response = await fetch(DEFAULT_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

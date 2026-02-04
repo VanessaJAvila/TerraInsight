@@ -86,9 +86,10 @@ export function ProfessionalDropzone({
 
     setIsAnalyzing(true);
 
-    const fileProgresses: FileProgress[] = newFiles.map(file => ({
+    const fileProgresses: FileProgress[] = newFiles.map((file) => ({
+      id: crypto.randomUUID(),
       file,
-      status: 'analyzing',
+      status: 'analyzing' as const,
       progress: 0,
     }));
 
@@ -106,11 +107,13 @@ export function ProfessionalDropzone({
 
       clearInterval(progressInterval);
 
-      if (!response.ok) {
-        throw new Error('Analysis failed');
-      }
+      const data = await response.json().catch(() => ({}));
 
-      const data = await response.json();
+      if (!response.ok) {
+        const msg = data?.error ?? 'Analysis failed';
+        const detail = data?.detail ? ` — ${data.detail}` : '';
+        throw new Error(`${msg}${detail}`);
+      }
       const results: AnalysisResult[] = data.results;
 
       updateWithResults(results, newFiles);
@@ -142,10 +145,8 @@ export function ProfessionalDropzone({
   }, [disabled, processFiles]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
-    if (selectedFiles.length > 0) {
-      processFiles(selectedFiles);
-    }
+    const selectedFiles = e.target.files ? Array.from(e.target.files).filter(isValidFileType) : [];
+    if (selectedFiles.length > 0) processFiles(selectedFiles);
     e.target.value = '';
   }, [processFiles]);
 
@@ -175,20 +176,26 @@ export function ProfessionalDropzone({
 
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-6", className)}>
       <section
         aria-label="File drop zone - drag and drop files here or click to browse"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200",
+          "relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-500 ease-out cursor-pointer group overflow-hidden",
+          "bg-gradient-to-br from-charcoal-900/50 via-charcoal-800/30 to-emerald-900/10 backdrop-blur-sm shadow-xl",
           isDragging
-            ? "border-emerald-accent bg-emerald-accent/5 scale-[1.02]"
-            : "border-charcoal-600 hover:border-emerald-accent/50",
+            ? "border-emerald-400 bg-gradient-to-br from-emerald-900/30 via-emerald-800/20 to-emerald-700/15 scale-[1.02] shadow-emerald-500/20 shadow-2xl"
+            : "border-charcoal-600 hover:border-emerald-500/60 hover:shadow-emerald-500/10 hover:shadow-xl",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-transparent to-emerald-400 transform rotate-45 translate-x-[-50%] translate-y-[-50%]"></div>
+          <div className="absolute inset-0 bg-gradient-to-l from-emerald-600 via-transparent to-emerald-300 transform -rotate-45 translate-x-[50%] translate-y-[50%]"></div>
+        </div>
+
         <input
           type="file"
           multiple
@@ -196,29 +203,47 @@ export function ProfessionalDropzone({
           onChange={handleFileInput}
           disabled={disabled}
           aria-label="Upload sustainability reports for analysis"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
         />
 
-        <div className="flex flex-col items-center gap-3">
-          <div className={cn(
-            "p-3 rounded-full transition-colors",
-            isDragging ? "bg-emerald-accent/20" : "bg-charcoal-800"
-          )}>
+        <div className="relative z-10 space-y-6">
+          <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 via-emerald-400/30 to-emerald-600/20 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg border border-emerald-500/20">
             <Upload className={cn(
-              "h-6 w-6 transition-colors",
-              isDragging ? "text-emerald-accent" : "text-charcoal-400"
+              "w-10 h-10 transition-all duration-300",
+              isDragging ? "text-emerald-300 scale-110" : "text-emerald-400 group-hover:text-emerald-300"
             )} />
           </div>
 
-          <div className="space-y-2">
-            <p className="text-lg font-medium text-charcoal-200">
-              {isDragging ? "Drop files here" : "Professional File Analysis"}
+          <div className="space-y-3">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-charcoal-50 to-emerald-100 bg-clip-text text-transparent">
+              {isDragging ? "Release to Analyze" : "Professional Sustainability Analysis"}
+            </h3>
+            <p className="text-charcoal-300 text-base">
+              {isDragging ? "Drop your files for instant analysis" : (
+                <>
+                  Drag & drop sustainability reports or{" "}
+                  <span className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
+                    click to browse files
+                  </span>
+                </>
+              )}
             </p>
-            <p className="text-sm text-charcoal-400">
-              Drag & drop sustainability reports or click to browse
-            </p>
-            <p className="text-xs text-charcoal-500">
-              Supports PDF, CSV, and Excel files
+            <div className="flex items-center justify-center space-x-6 text-xs text-charcoal-400 pt-2">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span>PDF Reports</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span>CSV Data</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span>Excel Files</span>
+              </div>
+            </div>
+            <p className="text-xs text-charcoal-500 pt-1">
+              Enterprise-grade processing • Up to 10MB • AI-powered anomaly detection
             </p>
           </div>
 
@@ -229,14 +254,19 @@ export function ProfessionalDropzone({
             </div>
           )}
         </div>
+
+        <div className={cn(
+          "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+          "bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-emerald-600/10"
+        )}></div>
       </section>
 
       {files.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-charcoal-300">Analysis Results</h3>
           
-          {files.map((fileProgress) => (
-            <div key={fileProgress.file.name} className="bg-charcoal-800/50 rounded-lg border border-charcoal-700 p-4">
+          {files.map((fileProgress, index) => (
+            <div key={fileProgress.id ?? `file-${fileProgress.file.name}-${index}`} className="bg-charcoal-800/50 rounded-lg border border-charcoal-700 p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {getFileIcon(fileProgress.file)}
@@ -253,7 +283,7 @@ export function ProfessionalDropzone({
                 <div className="flex items-center gap-2">
                   {getStatusIcon(fileProgress.status)}
                   <button
-                    onClick={() => removeFile(files.findIndex(fp => fp.file.name === fileProgress.file.name))}
+                    onClick={() => removeFile(index)}
                     className="p-1 hover:bg-charcoal-700 rounded transition-colors"
                   >
                     <X className="h-4 w-4 text-charcoal-400" />
