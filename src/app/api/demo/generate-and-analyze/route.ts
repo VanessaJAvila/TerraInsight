@@ -1,32 +1,32 @@
 import { NextResponse } from "next/server";
-import type { AnalysisResult } from '@/lib/types/analysis';
-import { 
-  detectTextAnomalies, 
-  generateAnalysisSummary, 
-  calculateFileEnergyEstimate
-} from '@/lib/utils/analysis';
-import { DEFAULT_WEBHOOK_URL } from '@/lib/constants/analysis';
+import type { AnalysisResult } from "@/lib/types/analysis";
+import {
+  detectTextAnomalies,
+  generateAnalysisSummary,
+  calculateFileEnergyEstimate,
+} from "@/lib/utils/analysis";
+import { resolveN8nWebhookUrl, triggerN8nWebhook, type EnvMode } from "@/lib/webhook";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type WebhookConfig = { webhookUrl: string; workflowEnabled: boolean; environmentMode: string };
+type WebhookConfig = { url: string | null; allowTrigger: boolean; envMode: EnvMode };
 
 export async function POST(request: Request) {
   try {
     let webhookConfig: WebhookConfig = {
-      webhookUrl: DEFAULT_WEBHOOK_URL,
-      workflowEnabled: false,
-      environmentMode: "test",
+      url: null,
+      allowTrigger: false,
+      envMode: "test",
     };
     try {
       const body = await request.json().catch(() => ({}));
-      const url = (body.webhookUrl as string)?.trim();
-      const enabled = body.workflowEnabled === true;
-      const mode = (body.environmentMode as string) || "test";
-      if (url) webhookConfig.webhookUrl = url;
-      webhookConfig.workflowEnabled = enabled;
-      webhookConfig.environmentMode = mode;
+      const envModeRaw = (body.envMode as string)?.trim()?.toLowerCase();
+      const envMode: EnvMode = envModeRaw === "prod" ? "prod" : "test";
+      const allowTrigger = body.allowTrigger === true;
+      const n8nWebhookTest = (body.n8nWebhookTest as string)?.trim() || undefined;
+      const { url } = resolveN8nWebhookUrl(envMode, n8nWebhookTest);
+      webhookConfig = { url, allowTrigger, envMode };
     } catch {
       // no body or invalid JSON
     }
@@ -141,7 +141,7 @@ async function analyzeSyntheticData(
   const energyEstimate = calculateFileEnergyEstimate(fileInfo.size, anomaly.detected);
 
   let webhookTriggered = false;
-  if (anomaly.detected && webhookConfig.workflowEnabled) {
+  if (anomaly.detected && webhookConfig.allowTrigger && webhookConfig.url) {
     webhookTriggered = await triggerDemoWebhook(fileInfo.name, anomaly, webhookConfig);
   }
   
@@ -163,30 +163,16 @@ async function triggerDemoWebhook(
   anomaly: { issues: string[]; severity: string; recommendations: string[] },
   config: WebhookConfig
 ): Promise<boolean> {
-  try {
-    const payload = {
-      action: "demo_critical_analysis",
-      details: `Synthetic critical waste analysis: ${filename} - ${anomaly.issues.join("; ")}`,
-      severity: anomaly.severity,
-      timestamp: new Date().toISOString(),
-      source: "agentic_demo_generation",
-      issues: anomaly.issues,
-      recommendations: anomaly.recommendations,
-    };
-
-    const url = config.webhookUrl || DEFAULT_WEBHOOK_URL;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    console.log(
-      `[EcoPulse] Demo webhook | mode=${config.environmentMode} | url=${url} | status=${response.status}`
-    );
-    return response.ok;
-  } catch (error) {
-    console.error("Demo webhook trigger failed:", error);
-    return false;
-  }
+  if (!config.url) return false;
+  const payload = {
+    action: "demo_critical_analysis",
+    details: `Synthetic critical waste analysis: ${filename} - ${anomaly.issues.join("; ")}`,
+    severity: anomaly.severity,
+    timestamp: new Date().toISOString(),
+    source: "agentic_demo_generation",
+    issues: anomaly.issues,
+    recommendations: anomaly.recommendations,
+  };
+  const result = await triggerN8nWebhook(config.url, payload, config.envMode);
+  return result.ok;
 }

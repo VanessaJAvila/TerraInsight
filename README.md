@@ -37,11 +37,16 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Add your OpenAI API key to `.env.local`:
+Add your OpenAI API key and n8n webhook URLs to `.env.local`:
 ```env
 OPENAI_API_KEY=sk-your-api-key-here
-N8N_WEBHOOK_URL=http://localhost:5680/webhook-test/eco-action
+N8N_WEBHOOK_TEST=http://localhost:5680/webhook-test/eco-action
+N8N_WEBHOOK_PROD=https://your-n8n.example.com/webhook/eco-action
 ```
+
+- **N8N_WEBHOOK_TEST**: Used when Agent Settings env mode is **Test** (e.g. local n8n).
+- **N8N_WEBHOOK_PROD**: Used when env mode is **Production**; never exposed in the UI.
+- In Agent Settings you can toggle **Test** vs **Production** and **Enable workflow triggers**. Production URL is only read from the server env; the optional Test URL field is a dev fallback when `N8N_WEBHOOK_TEST` is not set.
 
 ### 3. Start Development Server
 ```bash
@@ -319,11 +324,21 @@ TerraInsight/
 curl -X POST http://localhost:3000/api/analyze
 ```
 
+**Test analyze API with n8n trigger (test mode)**
+```bash
+# After: npm run seed && npm run dev
+curl -X POST http://localhost:3000/api/analyze \
+  -F "files=@demo-data/csv/critical_waste.csv" \
+  -F "envMode=test" \
+  -F "allowTrigger=true"
+# Optional: -F "n8nWebhookTest=http://localhost:5680/webhook-test/eco-action" if N8N_WEBHOOK_TEST is not set
+```
+
 **n8n Webhook Not Triggering**
 ```bash
 # Verify n8n is running on port 5680
 curl http://localhost:5680/webhook-test/eco-action
-# Check webhook URL in environment variables
+# Set N8N_WEBHOOK_TEST and N8N_WEBHOOK_PROD in .env.local; toggle env in Agent Settings
 ```
 
 **AI Agent Not Responding**

@@ -54,14 +54,14 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
       get aiContext() {
         return aiContext ?? "";
       },
-      get webhookUrl() {
-        return getSettings().webhookUrl;
+      get envMode() {
+        return getSettings().envMode;
       },
-      get workflowEnabled() {
-        return getSettings().workflowEnabled;
+      get allowTrigger() {
+        return getSettings().allowTrigger;
       },
-      get environmentMode() {
-        return getSettings().environmentMode;
+      get n8nWebhookTest() {
+        return getSettings().n8nWebhookTest;
       },
     };
   }, [aiContext]);
@@ -166,11 +166,11 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
     setIsGeneratingDemo(true);
 
     try {
-      const { webhookUrl, workflowEnabled, environmentMode } = getAgentSettingsForRequest();
+      const { envMode, allowTrigger, n8nWebhookTest } = getAgentSettingsForRequest();
       const response = await fetch("/api/demo/generate-and-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookUrl, workflowEnabled, environmentMode }),
+        body: JSON.stringify({ envMode, allowTrigger, n8nWebhookTest }),
       });
       
       const result = await response.json();

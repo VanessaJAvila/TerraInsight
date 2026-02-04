@@ -1,16 +1,16 @@
 import { streamText, type CoreMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
-import { DEFAULT_WEBHOOK_URL } from "@/lib/constants/analysis";
+import { resolveN8nWebhookUrl } from "@/lib/webhook";
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
 
 type WebhookConfig = {
-  webhookUrl?: string | null;
-  workflowEnabled?: boolean;
-  environmentMode?: string;
+  url: string | null;
+  allowTrigger: boolean;
+  envMode: string;
 };
 
 const SYSTEM_PROMPT = `You are EcoPulse AI, a professional sustainability consultant with expertise in environmental impact analysis.
@@ -55,12 +55,14 @@ async function triggerWebhook(
   payload: Record<string, unknown>,
   config: WebhookConfig
 ): Promise<string> {
-  const enabled = config.workflowEnabled === true;
-  if (!enabled) {
+  if (!config.allowTrigger) {
     return `ℹ️ Workflow triggers are disabled in Agent Settings. No webhook was called. Enable "Workflow triggers" in Agent Settings to alert the team automatically.`;
   }
-  const url = config.webhookUrl?.trim() || DEFAULT_WEBHOOK_URL;
-  const mode = config.environmentMode || "test";
+  if (!config.url) {
+    return `ℹ️ No webhook configured for ${config.envMode}. Set N8N_WEBHOOK_TEST (or prod) on the server or use Agent Settings test URL in dev.`;
+  }
+  const url = config.url;
+  const mode = config.envMode;
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -84,21 +86,22 @@ export async function POST(req: Request) {
     const {
       messages,
       aiContext,
-      webhookUrl,
-      workflowEnabled,
-      environmentMode,
+      envMode: envModeRaw,
+      allowTrigger,
+      n8nWebhookTest,
     } = body as {
       messages?: unknown[];
       aiContext?: string;
-      webhookUrl?: string | null;
-      workflowEnabled?: boolean;
-      environmentMode?: string;
+      envMode?: string;
+      allowTrigger?: boolean;
+      n8nWebhookTest?: string;
     };
-
+    const envMode = envModeRaw === "prod" ? "prod" : "test";
+    const { url } = resolveN8nWebhookUrl(envMode, n8nWebhookTest?.trim());
     const webhookConfig: WebhookConfig = {
-      webhookUrl: webhookUrl ?? null,
-      workflowEnabled: workflowEnabled === true,
-      environmentMode: environmentMode ?? "test",
+      url,
+      allowTrigger: allowTrigger === true,
+      envMode,
     };
 
     const systemMessage = `${SYSTEM_PROMPT}\n\nContext: ${aiContext?.trim() || "No uploaded data available"}`;

@@ -99,10 +99,10 @@ export function ProfessionalDropzone({
     try {
       const formData = new FormData();
       newFiles.forEach(file => formData.append('files', file));
-      const { webhookUrl, workflowEnabled, environmentMode } = getAgentSettingsForRequest();
-      formData.append('webhookUrl', webhookUrl);
-      formData.append('workflowEnabled', String(workflowEnabled));
-      formData.append('environmentMode', environmentMode);
+      const { envMode, allowTrigger, n8nWebhookTest } = getAgentSettingsForRequest();
+      formData.append("envMode", envMode);
+      formData.append("allowTrigger", String(allowTrigger));
+      if (n8nWebhookTest) formData.append("n8nWebhookTest", n8nWebhookTest);
 
       const progressInterval = setInterval(() => updateProgress(newFiles), PROGRESS_UPDATE_INTERVAL);
       const response = await fetch('/api/analyze', {

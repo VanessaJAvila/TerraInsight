@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { AnalysisResult, AnomalyDetection } from '@/lib/types/analysis';
-import { 
-  detectTextAnomalies, 
-  generateAnalysisSummary, 
+import type { AnalysisResult } from "@/lib/types/analysis";
+import {
+  detectTextAnomalies,
+  generateAnalysisSummary,
   getFileType,
-  calculateFileEnergyEstimate
-} from '@/lib/utils/analysis';
-import { DEFAULT_WEBHOOK_URL, MAX_FILE_SIZE_BYTES, MAX_SAMPLE_ROWS } from '@/lib/constants/analysis';
+  calculateFileEnergyEstimate,
+} from "@/lib/utils/analysis";
+import { MAX_FILE_SIZE_BYTES, MAX_SAMPLE_ROWS } from "@/lib/constants/analysis";
+import { triggerN8nWebhook, resolveN8nWebhookUrl } from "@/lib/webhook";
 
 class PdfParseError extends Error {
   constructor(
@@ -22,22 +23,27 @@ class PdfParseError extends Error {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function getWebhookConfigFromForm(formData: FormData): {
-  webhookUrl: string;
-  workflowEnabled: boolean;
-  environmentMode: string;
-} {
-  const webhookUrl = (formData.get("webhookUrl") as string)?.trim() || DEFAULT_WEBHOOK_URL;
-  const workflowEnabled = formData.get("workflowEnabled") === "true";
-  const environmentMode = (formData.get("environmentMode") as string) || "test";
-  return { webhookUrl, workflowEnabled, environmentMode };
-}
+type EnvMode = "test" | "prod";
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
-    const webhookConfig = getWebhookConfigFromForm(formData);
+    const envModeRaw = (formData.get("envMode") as string)?.trim()?.toLowerCase();
+    const envMode: EnvMode = envModeRaw === "prod" ? "prod" : "test";
+    const allowTrigger = formData.get("allowTrigger") === "true";
+    const n8nWebhookTest = (formData.get("n8nWebhookTest") as string)?.trim() || undefined;
+
+    const { url: webhookUrl, error: urlError } = resolveN8nWebhookUrl(
+      envMode as "test" | "prod",
+      n8nWebhookTest
+    );
+    if (envMode === "prod" && urlError) {
+      return NextResponse.json(
+        { error: urlError },
+        { status: 422 }
+      );
+    }
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -46,23 +52,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const webhookConfig = {
+      url: webhookUrl,
+      allowTrigger,
+      envMode,
+    };
+
     const results: AnalysisResult[] = [];
+    let lastWebhookResult: { triggered: boolean; envMode: string; status: number; detail?: string } = {
+      triggered: false,
+      envMode,
+      status: 0,
+    };
 
     for (const file of files) {
       try {
-        const result = await processFile(file, webhookConfig);
+        const { result, webhookResult } = await processFile(file, webhookConfig);
         results.push(result);
+        if (webhookResult) lastWebhookResult = webhookResult;
       } catch (error) {
-        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errMsg = error instanceof Error ? error.message : "Unknown error";
         const errDetail = error instanceof PdfParseError ? error.detail : undefined;
         results.push({
           filename: file.name,
-          status: 'error',
+          status: "error",
           fileType: getFileType(file.name),
-          extractedText: '',
+          extractedText: "",
           metadata: { fileSize: file.size },
-          anomaly: { detected: false, severity: 'low', issues: [], recommendations: [] },
-          summary: 'Processing failed',
+          anomaly: { detected: false, severity: "low", issues: [], recommendations: [] },
+          summary: "Processing failed",
           energyEstimate: 0,
           error: errDetail ? `${errMsg}: ${errDetail}` : errMsg,
         });
@@ -71,43 +89,58 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Analysis complete',
+      message: "Analysis complete",
       results,
       totalFiles: files.length,
-      anomaliesDetected: results.filter(r => r.anomaly.detected).length,
+      anomaliesDetected: results.filter((r) => r.anomaly.detected).length,
+      webhook: {
+        triggered: lastWebhookResult.triggered,
+        envMode: lastWebhookResult.envMode,
+        status: lastWebhookResult.status,
+        detail: lastWebhookResult.detail,
+      },
     });
-
   } catch (error) {
-    console.error('Analysis API error:', error);
+    console.error("Analysis API error:", error);
     return NextResponse.json(
-      { error: 'Failed to analyze files' },
+      { error: "Failed to analyze files" },
       { status: 500 }
     );
   }
 }
 
-type WebhookConfig = { webhookUrl: string; workflowEnabled: boolean; environmentMode: string };
+type WebhookConfig = {
+  url: string | null;
+  allowTrigger: boolean;
+  envMode: EnvMode;
+};
 
-async function processFile(file: File, webhookConfig: WebhookConfig): Promise<AnalysisResult> {
+async function processFile(
+  file: File,
+  webhookConfig: WebhookConfig
+): Promise<{
+  result: AnalysisResult;
+  webhookResult?: { triggered: boolean; envMode: string; status: number; detail?: string };
+}> {
   const filename = file.name;
   const fileType = getFileType(filename);
   const fileSize = file.size;
 
-  let extractedText = '';
+  let extractedText = "";
   let metadata: any = { fileSize };
 
-  if (fileType === 'pdf') {
+  if (fileType === "pdf") {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       throw new Error(`File too large: max ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`);
     }
-    const isPdf = file.type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
+    const isPdf = file.type === "application/pdf" || filename.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
-      throw new Error('Invalid PDF: type or extension mismatch');
+      throw new Error("Invalid PDF: type or extension mismatch");
     }
     const pdfData = await parsePDF(file, filename);
     extractedText = pdfData.text;
     metadata.pageCount = pdfData.pageCount;
-  } else if (fileType === 'csv') {
+  } else if (fileType === "csv") {
     const csvData = await parseCSV(file);
     extractedText = csvData.text;
     metadata.rowCount = csvData.rowCount;
@@ -121,20 +154,46 @@ async function processFile(file: File, webhookConfig: WebhookConfig): Promise<An
   const energyEstimate = calculateFileEnergyEstimate(fileSize, anomaly.detected);
 
   let webhookTriggered = false;
-  if (anomaly.detected && webhookConfig.workflowEnabled) {
-    webhookTriggered = await triggerWebhook(filename, anomaly, webhookConfig);
+  let webhookResult: { triggered: boolean; envMode: string; status: number; detail?: string } | undefined;
+
+  if (anomaly.detected && webhookConfig.allowTrigger && webhookConfig.url) {
+    const payload = {
+      action: "investigate_file_anomaly",
+      details: `File "${filename}" analysis detected: ${anomaly.issues.join(", ")}`,
+      severity: anomaly.severity,
+      timestamp: new Date().toISOString(),
+      source: "TerraInsight File Analysis",
+      recommendations: anomaly.recommendations,
+    };
+    const triggerResult = await triggerN8nWebhook(
+      webhookConfig.url,
+      payload,
+      webhookConfig.envMode
+    );
+    webhookTriggered = triggerResult.ok;
+    webhookResult = {
+      triggered: triggerResult.ok,
+      envMode: webhookConfig.envMode,
+      status: triggerResult.status,
+      detail: triggerResult.detail,
+    };
+  } else if (anomaly.detected && webhookConfig.allowTrigger && !webhookConfig.url) {
+    console.log("N8N SKIPPED: no webhook configured");
   }
 
   return {
-    filename,
-    status: 'success',
-    fileType,
-    extractedText,
-    metadata,
-    anomaly,
-    webhookTriggered,
-    summary,
-    energyEstimate,
+    result: {
+      filename,
+      status: "success",
+      fileType,
+      extractedText,
+      metadata,
+      anomaly,
+      webhookTriggered,
+      summary,
+      energyEstimate,
+    },
+    webhookResult,
   };
 }
 
@@ -202,33 +261,4 @@ async function parseCSV(file: File): Promise<{ text: string; rowCount: number; h
 }
 
 
-async function triggerWebhook(
-  filename: string,
-  anomaly: AnomalyDetection,
-  config: WebhookConfig
-): Promise<boolean> {
-  try {
-    const payload = {
-      action: 'investigate_file_anomaly',
-      details: `File "${filename}" analysis detected: ${anomaly.issues.join(', ')}`,
-      severity: anomaly.severity,
-      timestamp: new Date().toISOString(),
-      source: 'TerraInsight File Analysis',
-      recommendations: anomaly.recommendations,
-    };
-
-    const url = config.webhookUrl || DEFAULT_WEBHOOK_URL;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    console.log(`[EcoPulse] File analysis webhook | mode=${config.environmentMode} | url=${url} | status=${response.status}`);
-    return response.ok;
-  } catch (error) {
-    console.error('Webhook trigger failed:', error);
-    return false;
-  }
-}
 
