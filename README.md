@@ -1,117 +1,152 @@
 # TerraInsight - EcoPulse AI
 
-An intelligent dashboard for ecological impact analysis with AI-powered sustainability workflow orchestration.
+Professional ecological impact analysis platform with AI-powered sustainability consulting and automated workflow integration.
 
-## 🌿 Features
+## Overview
 
-- **Smart File Analysis**: Upload PDF/CSV energy and carbon reports for AI analysis
-- **Real-time Chat Agent**: Conversational AI that analyzes your ecological data
-- **n8n Integration**: Automatic workflow triggering when environmental anomalies are detected
-- **Premium UI**: Nature-inspired dark theme with professional Green-Tech design
-- **Accessibility First**: Full keyboard navigation and screen reader support
+TerraInsight is a Next.js 15 application that combines advanced AI analysis with sustainability expertise. The platform helps organizations track, analyze, and optimize their environmental impact through intelligent data processing and automated workflow triggers.
 
-## 🚀 Quick Start
+## Core Features
 
-### Prerequisites
-- Node.js 20+ installed
-- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
-- n8n instance running (optional but recommended)
+### 🤖 **AI Sustainability Consultant**
+- **Expert Analysis**: GPT-4o-mini powered ecological impact assessment
+- **Real-time Responses**: Streaming chat interface with professional insights
+- **Energy Transparency**: Built-in energy consumption tracking for AI interactions
+- **Action-Oriented**: Provides specific, measurable sustainability recommendations
 
-### Installation
+### 📊 **Smart Data Processing**  
+- **File Upload**: Drag-and-drop support for PDF and CSV sustainability reports
+- **Automatic Parsing**: Extract and contextualize data from energy and carbon reports
+- **AI Integration**: Feed uploaded data directly into AI analysis context
 
+### 🔄 **Workflow Automation**
+- **Function Calling**: Automatic trigger of sustainability workflows via n8n integration
+- **Environmental Alerts**: Detection of anomalies and inefficiencies triggers team notifications
+- **Professional Integration**: Seamless connection to existing sustainability management systems
+
+### ⚡ **Energy Monitoring**
+- **Session Tracking**: Real-time monitoring of AI interaction energy consumption
+- **Per-Message Metrics**: Individual energy cost display for each AI response
+- **Transparency**: Practice sustainability principles in the platform itself
+
+## Quick Start
+
+### 1. Installation
 ```bash
-# Install dependencies
+git clone <repository-url>
+cd TerraInsight
 npm install
+```
 
-# Set up environment variables
+### 2. Environment Configuration
+```bash
 cp .env.local.example .env.local
-# Edit .env.local and add your OPENAI_API_KEY
+```
 
-# Start development server
+Add your OpenAI API key to `.env.local`:
+```env
+OPENAI_API_KEY=sk-your-api-key-here
+N8N_WEBHOOK_URL=http://localhost:5680/webhook-test/eco-action
+```
+
+### 3. Start Development Server
+```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000` to see TerraInsight in action!
+Access the application at [http://localhost:3000](http://localhost:3000)
 
-### n8n Integration Setup
+### 4. Optional: n8n Workflow Integration
 
-1. **Install n8n Desktop**: Download from [n8n.io/desktop](https://n8n.io/desktop)
-2. **Start n8n**: Launch n8n Desktop (default: http://localhost:5678)
-3. **Create Webhook**: Set up a webhook workflow listening at `/webhook-test/eco-action`
-4. **Test Integration**: Upload a report and watch EcoPulse AI trigger workflows automatically
+To enable automated sustainability workflows:
 
-## 🛠️ Project Structure
+1. **Install and start n8n**:
+   ```bash
+   npx n8n start
+   ```
 
-```
-src/
-├── app/                    # Next.js 15 App Router
-│   ├── api/chat/          # AI chat endpoint with n8n integration
-│   ├── api/analyze/       # File analysis API
-│   └── page.tsx           # Main dashboard
-├── components/
-│   ├── dashboard/         # Dashboard components
-│   │   ├── eco-dropzone.tsx    # File upload with parsing
-│   │   ├── eco-agent.tsx       # AI chat interface
-│   │   └── sidebar.tsx         # Navigation sidebar
-│   └── ui/               # Shadcn/UI components
-└── lib/
-    ├── actions/          # Server actions for file parsing
-    └── utils/            # Utility functions
-```
+2. **Create webhook workflow**:
+   - Access n8n at http://localhost:5680
+   - Create new workflow with Webhook node
+   - Configure path: `webhook-test/eco-action`
+   - Set method: POST
+   - Activate workflow
 
-## 🤖 AI Capabilities
+## Architecture
 
-EcoPulse AI automatically:
-- **Detects** energy consumption anomalies
-- **Identifies** waste inefficiencies  
-- **Quantifies** carbon emission patterns
-- **Triggers** n8n workflows for remediation
-- **Suggests** concrete sustainability actions
+### Clean Code Principles Applied
+- **Single Responsibility**: Each component handles one specific concern
+- **Separation of Concerns**: UI, business logic, and API layers are clearly separated
+- **DRY**: Reusable utilities for energy calculation and file processing
+- **Clear Naming**: Functions and variables express intent clearly
+- **Minimal Dependencies**: Only essential packages included
 
-## 🔗 n8n Webhook Integration
+### Key Design Decisions
+- **Energy Transparency**: Track and display AI interaction costs
+- **Progressive Enhancement**: Works without n8n, enhanced with it
+- **Error Resilience**: Graceful degradation when services are unavailable
+- **Professional UX**: Clean interface focused on core functionality
 
-When EcoPulse AI detects environmental issues, it sends a POST request to:
-```
-http://localhost:5678/webhook-test/eco-action
-```
+## Integration Details
 
-**Payload structure:**
+### AI Function Calling
+The platform uses OpenAI's function calling to trigger sustainability workflows when environmental issues are detected:
+
 ```json
 {
-  "action": "reduce_energy_consumption",
-  "details": "High energy usage detected in HVAC system during off-hours",
-  "priority": "high",
-  "timestamp": "2024-02-03T17:45:00.000Z",
-  "source": "EcoPulse AI",
-  "workflowId": "eco-1706981100000"
+  "action": "investigate_elevated_emissions",
+  "details": "Block C emissions 50% above normal levels",
+  "severity": "high",
+  "timestamp": "2026-02-04T13:00:00.000Z"
 }
 ```
 
-## 🎨 Technology Stack
+### Energy Consumption Tracking
+Real-time monitoring of AI interaction energy costs:
+- **Formula**: `totalTokens × 0.0001 = kWh`
+- **Display**: Session total + per-message consumption
+- **Purpose**: Transparency and sustainability awareness
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS with nature-inspired theme
-- **UI Components**: Shadcn/UI with custom Green-Tech styling
-- **AI**: Vercel AI SDK with OpenAI GPT-4
-- **File Processing**: PDF-parse & Papa Parse for report analysis
-- **Orchestration**: n8n webhook integration for sustainability workflows
+## Technology Stack
 
-## 📊 Supported File Types
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS with custom sustainability theme
+- **UI Components**: Shadcn/UI with nature-inspired dark theme
+- **AI Integration**: Vercel AI SDK with OpenAI GPT-4o-mini
+- **File Processing**: PDF parsing and CSV analysis capabilities
+- **Workflow Integration**: n8n webhook integration for automated responses
+
+## File Support
 
 - **PDF**: Energy reports, carbon assessments, sustainability audits
-- **CSV**: Energy consumption data, emissions data, waste tracking
-- **Excel**: XLSX/XLS files (basic text extraction)
+- **CSV**: Energy consumption data, emissions tracking, KPI sheets
+- **Excel**: XLSX/XLS files (text extraction)
 
-## 🌱 Environmental Impact
+## Sustainability Mission
 
-TerraInsight helps organizations:
-- Reduce energy consumption by up to 30%
-- Identify waste reduction opportunities
-- Automate sustainability response workflows
-- Meet ESG reporting requirements
-- Achieve carbon neutrality goals
+This platform practices sustainability through:
+- **Transparent AI Usage**: Real-time energy consumption display
+- **Efficient Processing**: Optimized algorithms and resource usage
+- **Educational Interface**: Builds user awareness of digital environmental impact
+- **Action-Oriented**: Focuses on measurable environmental improvements
 
-## 📝 License
+Built with sustainability at its core - from code efficiency to user consciousness.
 
-MIT License - build amazing green-tech solutions! 🌍
+## Development Standards
+
+### Code Quality
+- TypeScript strict mode enabled
+- ESLint with sustainability-focused rules
+- Clean code principles throughout
+- Comprehensive error handling
+
+### Performance
+- Optimized bundle size and loading times
+- Efficient state management
+- Minimal re-renders and computational overhead
+- Resource-conscious AI interaction patterns
+
+---
+
+**Contributing**: Follow clean code principles and maintain the sustainability-first approach.
+**License**: MIT - Build amazing green-tech solutions! 🌍
