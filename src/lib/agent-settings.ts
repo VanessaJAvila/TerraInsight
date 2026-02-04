@@ -1,14 +1,8 @@
-/**
- * Agent Settings persisted in localStorage (client-only).
- * Production webhook URL is never stored or exposed; server uses N8N_WEBHOOK_PROD from env.
- */
-
 const STORAGE_KEY = "terrainsight-agent-settings";
 
 export type EnvMode = "test" | "prod";
 
 export interface AgentSettings {
-  /** Optional dev convenience: test webhook URL (e.g. localhost). Only used when server N8N_WEBHOOK_TEST is not set. */
   n8nWebhookTest: string;
   isWorkflowEnabled: boolean;
   envMode: EnvMode;
@@ -53,7 +47,6 @@ export function setAgentSettings(settings: Partial<AgentSettings>): void {
   }
 }
 
-/** Values to send with analyze API (envMode + allowTrigger + optional test URL fallback). Call from client only. */
 export function getAgentSettingsForRequest(): {
   envMode: EnvMode;
   allowTrigger: boolean;

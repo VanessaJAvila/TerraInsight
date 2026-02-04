@@ -7,7 +7,7 @@ import {
   calculateFileEnergyEstimate,
 } from "@/lib/utils/analysis";
 import { MAX_FILE_SIZE_BYTES, MAX_SAMPLE_ROWS } from "@/lib/constants/analysis";
-import { triggerN8nWebhook, resolveN8nWebhookUrl } from "@/lib/webhook";
+import { triggerN8nWebhook, resolveN8nWebhookUrl, type EnvMode } from "@/lib/webhook";
 
 class PdfParseError extends Error {
   constructor(
@@ -23,69 +23,86 @@ class PdfParseError extends Error {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type EnvMode = "test" | "prod";
+type WebhookResultSummary = {
+  triggered: boolean;
+  envMode: string;
+  status: number;
+  detail?: string;
+};
+
+type WebhookConfig = {
+  url: string | null;
+  allowTrigger: boolean;
+  envMode: EnvMode;
+};
+
+function parseAnalyzeFormData(formData: FormData): {
+  files: File[];
+  envMode: EnvMode;
+  allowTrigger: boolean;
+  n8nWebhookTest?: string;
+} {
+  const files = formData.getAll("files") as File[];
+  const envModeRaw = (formData.get("envMode") as string)?.trim()?.toLowerCase();
+  const envMode: EnvMode = envModeRaw === "prod" ? "prod" : "test";
+  const allowTrigger = formData.get("allowTrigger") === "true";
+  const n8nWebhookTest = (formData.get("n8nWebhookTest") as string)?.trim() || undefined;
+  return { files, envMode, allowTrigger, n8nWebhookTest };
+}
+
+function buildFileErrorResult(file: File, error: unknown): AnalysisResult {
+  const errMsg = error instanceof Error ? error.message : "Unknown error";
+  const errDetail = error instanceof PdfParseError ? error.detail : undefined;
+  return {
+    filename: file.name,
+    status: "error",
+    fileType: getFileType(file.name),
+    extractedText: "",
+    metadata: { fileSize: file.size },
+    anomaly: { detected: false, severity: "low", issues: [], recommendations: [] },
+    summary: "Processing failed",
+    energyEstimate: 0,
+    error: errDetail ? `${errMsg}: ${errDetail}` : errMsg,
+  };
+}
+
+async function processAllFiles(
+  files: File[],
+  webhookConfig: WebhookConfig
+): Promise<{ results: AnalysisResult[]; lastWebhookResult: WebhookResultSummary }> {
+  const results: AnalysisResult[] = [];
+  let lastWebhookResult: WebhookResultSummary = {
+    triggered: false,
+    envMode: webhookConfig.envMode,
+    status: 0,
+  };
+  for (const file of files) {
+    try {
+      const { result, webhookResult } = await processFile(file, webhookConfig);
+      results.push(result);
+      if (webhookResult) lastWebhookResult = webhookResult;
+    } catch (error) {
+      results.push(buildFileErrorResult(file, error));
+    }
+  }
+  return { results, lastWebhookResult };
+}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const files = formData.getAll("files") as File[];
-    const envModeRaw = (formData.get("envMode") as string)?.trim()?.toLowerCase();
-    const envMode: EnvMode = envModeRaw === "prod" ? "prod" : "test";
-    const allowTrigger = formData.get("allowTrigger") === "true";
-    const n8nWebhookTest = (formData.get("n8nWebhookTest") as string)?.trim() || undefined;
+    const { files, envMode, allowTrigger, n8nWebhookTest } = parseAnalyzeFormData(formData);
 
-    const { url: webhookUrl, error: urlError } = resolveN8nWebhookUrl(
-      envMode as "test" | "prod",
-      n8nWebhookTest
-    );
+    const { url: webhookUrl, error: urlError } = resolveN8nWebhookUrl(envMode, n8nWebhookTest);
     if (envMode === "prod" && urlError) {
-      return NextResponse.json(
-        { error: urlError },
-        { status: 422 }
-      );
+      return NextResponse.json({ error: urlError }, { status: 422 });
+    }
+    if (!files?.length) {
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
-    if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: "No files provided" },
-        { status: 400 }
-      );
-    }
-
-    const webhookConfig = {
-      url: webhookUrl,
-      allowTrigger,
-      envMode,
-    };
-
-    const results: AnalysisResult[] = [];
-    let lastWebhookResult: { triggered: boolean; envMode: string; status: number; detail?: string } = {
-      triggered: false,
-      envMode,
-      status: 0,
-    };
-
-    for (const file of files) {
-      try {
-        const { result, webhookResult } = await processFile(file, webhookConfig);
-        results.push(result);
-        if (webhookResult) lastWebhookResult = webhookResult;
-      } catch (error) {
-        const errMsg = error instanceof Error ? error.message : "Unknown error";
-        const errDetail = error instanceof PdfParseError ? error.detail : undefined;
-        results.push({
-          filename: file.name,
-          status: "error",
-          fileType: getFileType(file.name),
-          extractedText: "",
-          metadata: { fileSize: file.size },
-          anomaly: { detected: false, severity: "low", issues: [], recommendations: [] },
-          summary: "Processing failed",
-          energyEstimate: 0,
-          error: errDetail ? `${errMsg}: ${errDetail}` : errMsg,
-        });
-      }
-    }
+    const webhookConfig: WebhookConfig = { url: webhookUrl, allowTrigger, envMode };
+    const { results, lastWebhookResult } = await processAllFiles(files, webhookConfig);
 
     return NextResponse.json({
       success: true,
@@ -102,18 +119,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Analysis API error:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze files" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to analyze files" }, { status: 500 });
   }
 }
-
-type WebhookConfig = {
-  url: string | null;
-  allowTrigger: boolean;
-  envMode: EnvMode;
-};
 
 async function processFile(
   file: File,

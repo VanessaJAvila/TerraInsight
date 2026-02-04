@@ -56,7 +56,6 @@
   background-size: 24px 24px;
 }
 
-/* Chat messages scroll: always show scrollbar, stable layout */
 .chat-messages-scroll {
   overflow-y: scroll;
   scrollbar-gutter: stable;

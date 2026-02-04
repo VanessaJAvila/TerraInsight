@@ -1,6 +1,7 @@
-import type { AnalysisResult, StoredReport } from '@/lib/types/analysis';
+import type { AnalysisResult, StoredReport } from "@/lib/types/analysis";
 
-const STORAGE_KEY = 'terra-reports';
+const STORAGE_KEY = "terra-reports";
+const MAX_STORED_REPORTS = 50;
 
 function generateId(): string {
   return `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -38,8 +39,8 @@ export function saveReport(
       globalThis.dispatchEvent(new CustomEvent('terra-reports-updated'));
     }
   } catch {
-    if (reports.length > 50) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, 50)));
+    if (reports.length > MAX_STORED_REPORTS) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, MAX_STORED_REPORTS)));
     }
   }
   return report;

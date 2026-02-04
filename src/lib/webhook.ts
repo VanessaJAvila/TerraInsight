@@ -1,10 +1,5 @@
-/**
- * Server-only n8n webhook trigger. Do not import from client.
- */
-
 export type EnvMode = "test" | "prod";
 
-/** Resolve n8n webhook URL from env (and optional test fallback from client). Never expose prod URL. */
 export function resolveN8nWebhookUrl(
   envMode: EnvMode,
   n8nWebhookTestFromClient?: string
@@ -32,11 +27,6 @@ export interface N8nTriggerResult {
   detail?: string;
 }
 
-/**
- * POST JSON to the given URL, await response, return status info.
- * Logs: N8N TRIGGER <envMode> <url> status <status>
- * On non-2xx, logs response body and returns informative result.
- */
 export async function triggerN8nWebhook(
   url: string,
   payload: Record<string, unknown>,
@@ -56,9 +46,7 @@ export async function triggerN8nWebhook(
       try {
         body = await response.text();
         if (body) console.log("N8N TRIGGER non-2xx body:", body);
-      } catch {
-        // ignore
-      }
+      } catch {}
       return {
         ok: false,
         status,

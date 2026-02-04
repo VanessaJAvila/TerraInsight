@@ -27,8 +27,8 @@ export async function POST(request: Request) {
       const n8nWebhookTest = (body.n8nWebhookTest as string)?.trim() || undefined;
       const { url } = resolveN8nWebhookUrl(envMode, n8nWebhookTest);
       webhookConfig = { url, allowTrigger, envMode };
-    } catch {
-      // no body or invalid JSON
+    } catch (err) {
+      console.warn("Demo generate-and-analyze: webhook config from body failed, using defaults", err);
     }
 
     const syntheticData = generateSyntheticCriticalData();

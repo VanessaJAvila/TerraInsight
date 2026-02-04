@@ -102,7 +102,6 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
   const lastScrollAtRef = useRef(0);
   const SCROLL_THROTTLE_MS = 120;
 
-  // Scroll to bottom: throttled so streaming doesn't cause header/scrollbar jitter
   useEffect(() => {
     const el = messagesEndRef.current;
     if (!el) return;
@@ -125,7 +124,6 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
     };
   }, [displayMessages]);
 
-  // Debounce session energy so header doesn't jump during streaming
   const energyValue = useMemo(() => {
     return displayMessages
       .filter((m) => m.role === 'assistant' && m.id !== 'welcome')

@@ -1,14 +1,15 @@
 import type { AnalysisResult, AnomalyDetection } from '@/lib/types/analysis';
-import { 
-  MAX_CONTEXT_LENGTH, 
-  ANOMALY_KEYWORDS, 
-  LARGE_NUMBER_THRESHOLD, 
+import {
+  MAX_CONTEXT_LENGTH,
+  ANOMALY_KEYWORDS,
+  LARGE_NUMBER_THRESHOLD,
   MIN_LARGE_NUMBERS_COUNT,
   ENERGY_PER_FILE_KB,
   ENERGY_BASE_PROCESSING,
+  ENERGY_ANOMALY_BONUS,
   ENERGY_PER_TOKEN,
-  CHARS_PER_TOKEN_ESTIMATE
-} from '@/lib/constants/analysis';
+  CHARS_PER_TOKEN_ESTIMATE,
+} from "@/lib/constants/analysis";
 
 export function convertAnalysisResultsToContext(results: AnalysisResult[]): string {
   return results
@@ -157,7 +158,7 @@ export function calculateFileEnergyEstimate(fileSize: number, hasAnomalies: bool
   const fileSizeKB = fileSize / 1024;
   const processingEnergy = fileSizeKB * ENERGY_PER_FILE_KB;
   const baseEnergy = ENERGY_BASE_PROCESSING;
-  const anomalyBonus = hasAnomalies ? 0.002 : 0;
+  const anomalyBonus = hasAnomalies ? ENERGY_ANOMALY_BONUS : 0;
   
   return Number((processingEnergy + baseEnergy + anomalyBonus).toFixed(4));
 }
