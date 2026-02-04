@@ -5,13 +5,15 @@ import { useRef, useEffect, useMemo, useState } from "react";
 import { Send, Bot, Sparkles, Loader2, Zap, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { calculateChatEnergyConsumption } from "@/lib/utils/analysis";
 
 const ENERGY_PER_TOKEN = 0.0001;
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 
 function calculateEnergyConsumption(totalTokens: number): string {
   if (!totalTokens || totalTokens <= 0) return "0.0000";
-  return (totalTokens * ENERGY_PER_TOKEN).toFixed(4);
+  const kWh = totalTokens * ENERGY_PER_TOKEN;
+  return kWh.toFixed(4);
 }
 
 function extractTokenUsage(message: any): { totalTokens: number; estimated: boolean } {
@@ -25,24 +27,6 @@ function extractTokenUsage(message: any): { totalTokens: number; estimated: bool
   }
   
   return { totalTokens: 0, estimated: false };
-}
-
-function EnergyIndicator({ message }: { message: any }) {
-  const usage = extractTokenUsage(message);
-  
-  if (usage.totalTokens === 0) return null;
-  
-  return (
-    <div className="px-4 py-1 bg-charcoal-900/10">
-      <div className="flex justify-end">
-        <span className="text-[10px] text-charcoal-600 flex items-center gap-1">
-          <span className="opacity-50">⚡</span>
-          <span className="font-mono">{calculateEnergyConsumption(usage.totalTokens)} kWh</span>
-          {usage.estimated && <span className="text-charcoal-700">*</span>}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 interface EcoAgentProps {
@@ -89,15 +73,16 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
   }, [displayMessages]);
 
   useEffect(() => {
-    const totalTokens = displayMessages
-      .filter(message => message.role === 'assistant' && message.id !== 'welcome')
-      .reduce((sum, message) => {
-        const usage = extractTokenUsage(message);
-        return sum + usage.totalTokens;
+    const totalEnergy = displayMessages
+      .filter(m => m.role === 'assistant' && m.id !== 'welcome')
+      .reduce((total, m) => {
+        const usage = extractTokenUsage(m);
+        return total + (usage.totalTokens * 0.0001);
       }, 0);
     
-    setSessionEnergy(totalTokens * ENERGY_PER_TOKEN);
+    setSessionEnergy(totalEnergy);
   }, [displayMessages]);
+
 
   return (
     <div className="flex h-full flex-col">
@@ -115,19 +100,14 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Session Energy Summary - Clean & Simple */}
+          <div className="flex items-center gap-2">
           {sessionEnergy > 0 && (
-            <div 
-              className="flex items-center gap-1.5 rounded-full bg-emerald-accent/10 px-2.5 py-1 text-xs text-emerald-accent/80"
-              title={`Session consumption: ${sessionEnergy.toFixed(4)} kWh`}
-            >
+            <div className="flex items-center gap-1 rounded-full bg-emerald-accent/10 px-2 py-0.5 text-xs text-emerald-accent/80">
               <Leaf className="h-3 w-3" />
-              <span className="font-medium">{sessionEnergy.toFixed(4)} kWh</span>
+              <span>{sessionEnergy.toFixed(4)} kWh</span>
             </div>
           )}
-
-          {/* Loading indicators */}
+          
           {isExecutingTool ? (
             <span className="flex items-center gap-1.5 rounded-full bg-green-500/20 px-2.5 py-1 text-xs text-green-400">
               <Zap className="h-3 w-3 animate-pulse" />
@@ -170,16 +150,27 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
                 </div>
               </div>
               
-              {/* Energy consumption indicator */}
-              {m.role === "assistant" && m.content && m.id !== "welcome" && (
-                <EnergyIndicator message={m} />
-              )}
+              {m.role === "assistant" && m.id !== "welcome" && (() => {
+                const usage = extractTokenUsage(m);
+                if (usage.totalTokens > 0) {
+                  return (
+                    <div className="border-t border-charcoal-700/50 px-4 py-1.5 bg-charcoal-900/30">
+                      <div className="flex items-center text-xs text-charcoal-500">
+                        <span className="flex items-center gap-1">
+                          ⚡ {calculateChatEnergyConsumption(usage.totalTokens)} kWh
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
             </div>
             {m.role === "user" && <div className="w-8 shrink-0" />}
           </div>
         ))}
         
-        {/* Tool execution indicator */}
         {isExecutingTool && (
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/20">
@@ -192,7 +183,6 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
         )}
 
         
-        {/* Regular loading indicator (when not executing tools) */}
         {isLoading && !isExecutingTool && (
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-accent/20">

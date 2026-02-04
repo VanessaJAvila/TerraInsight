@@ -22,7 +22,6 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-charcoal-800 bg-charcoal-950/95 backdrop-blur-sm">
       <div className="flex h-full flex-col">
-        {/* Logo */}
         <div className="flex h-16 items-center gap-2 border-b border-charcoal-800 px-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-accent/20 text-emerald-accent">
             <Leaf className="h-5 w-5" />
@@ -33,7 +32,6 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -64,7 +62,6 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Footer */}
         <div className="border-t border-charcoal-800 p-4">
           <p className="text-xs text-charcoal-500">
             © {new Date().getFullYear()} TerraInsight

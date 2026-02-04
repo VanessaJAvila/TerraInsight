@@ -11,23 +11,17 @@ TerraInsight is a Next.js 15 application that combines advanced AI analysis with
 ### 🤖 **AI Sustainability Consultant**
 - **Expert Analysis**: GPT-4o-mini powered ecological impact assessment
 - **Real-time Responses**: Streaming chat interface with professional insights
-- **Energy Transparency**: Built-in energy consumption tracking for AI interactions
 - **Action-Oriented**: Provides specific, measurable sustainability recommendations
 
 ### 📊 **Smart Data Processing**  
 - **File Upload**: Drag-and-drop support for PDF and CSV sustainability reports
 - **Automatic Parsing**: Extract and contextualize data from energy and carbon reports
-- **AI Integration**: Feed uploaded data directly into AI analysis context
+- **Anomaly Detection**: Heuristic analysis to identify environmental issues automatically
 
 ### 🔄 **Workflow Automation**
 - **Function Calling**: Automatic trigger of sustainability workflows via n8n integration
 - **Environmental Alerts**: Detection of anomalies and inefficiencies triggers team notifications
 - **Professional Integration**: Seamless connection to existing sustainability management systems
-
-### ⚡ **Energy Monitoring**
-- **Session Tracking**: Real-time monitoring of AI interaction energy consumption
-- **Per-Message Metrics**: Individual energy cost display for each AI response
-- **Transparency**: Practice sustainability principles in the platform itself
 
 ## Quick Start
 
@@ -77,12 +71,12 @@ To enable automated sustainability workflows:
 ### Clean Code Principles Applied
 - **Single Responsibility**: Each component handles one specific concern
 - **Separation of Concerns**: UI, business logic, and API layers are clearly separated
-- **DRY**: Reusable utilities for energy calculation and file processing
+- **DRY**: Reusable utilities for anomaly detection and file processing
 - **Clear Naming**: Functions and variables express intent clearly
 - **Minimal Dependencies**: Only essential packages included
 
 ### Key Design Decisions
-- **Energy Transparency**: Track and display AI interaction costs
+- **Clean Architecture**: Separated types, constants, and utilities for maintainability
 - **Progressive Enhancement**: Works without n8n, enhanced with it
 - **Error Resilience**: Graceful degradation when services are unavailable
 - **Professional UX**: Clean interface focused on core functionality
@@ -101,11 +95,11 @@ The platform uses OpenAI's function calling to trigger sustainability workflows 
 }
 ```
 
-### Energy Consumption Tracking
-Real-time monitoring of AI interaction energy costs:
-- **Formula**: `totalTokens × 0.0001 = kWh`
-- **Display**: Session total + per-message consumption
-- **Purpose**: Transparency and sustainability awareness
+### Anomaly Detection System
+Intelligent analysis of uploaded sustainability data:
+- **Keyword Detection**: Identifies waste, high consumption, and critical issues
+- **Threshold Analysis**: Detects numerical anomalies and consumption spikes
+- **Automated Alerts**: Triggers workflows when environmental issues are found
 
 ## Technology Stack
 
@@ -124,13 +118,13 @@ Real-time monitoring of AI interaction energy costs:
 
 ## Sustainability Mission
 
-This platform practices sustainability through:
-- **Transparent AI Usage**: Real-time energy consumption display
-- **Efficient Processing**: Optimized algorithms and resource usage
-- **Educational Interface**: Builds user awareness of digital environmental impact
-- **Action-Oriented**: Focuses on measurable environmental improvements
+This platform promotes environmental responsibility through:
+- **Efficient Processing**: Optimized algorithms and minimal resource usage
+- **Action-Oriented Analysis**: Focuses on measurable environmental improvements
+- **Automated Response**: Instant workflow triggers for environmental issues
+- **Professional Insights**: Data-driven sustainability recommendations
 
-Built with sustainability at its core - from code efficiency to user consciousness.
+Built with sustainability at its core - from code efficiency to environmental impact.
 
 ## Development Standards
 
@@ -144,7 +138,7 @@ Built with sustainability at its core - from code efficiency to user consciousne
 - Optimized bundle size and loading times
 - Efficient state management
 - Minimal re-renders and computational overhead
-- Resource-conscious AI interaction patterns
+- Optimized file processing and anomaly detection algorithms
 
 ---
 

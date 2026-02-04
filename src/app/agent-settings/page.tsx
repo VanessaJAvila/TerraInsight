@@ -40,9 +40,10 @@ export default function AgentSettingsPage() {
                     type="url"
                     placeholder="https://your-n8n-instance.com/webhook/..."
                     className="mt-2 w-full rounded-lg border border-charcoal-700 bg-charcoal-900 px-4 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-emerald-accent focus:outline-none"
+                    suppressHydrationWarning={true}
                   />
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" suppressHydrationWarning={true}>
                   Save Configuration
                 </Button>
               </CardContent>
@@ -64,7 +65,7 @@ export default function AgentSettingsPage() {
                   Enable this to allow the AI Eco-Agent to simulate triggering
                   sustainability workflows when it identifies opportunities.
                 </p>
-                <Button className="mt-4">Enable Workflow Triggers</Button>
+                <Button className="mt-4" suppressHydrationWarning={true}>Enable Workflow Triggers</Button>
               </CardContent>
             </Card>
           </div>
