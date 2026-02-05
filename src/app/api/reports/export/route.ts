@@ -37,9 +37,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("PDF export error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("PDF export error:", msg, stack);
+    const detail = process.env.NODE_ENV === "development" ? msg : undefined;
     return NextResponse.json(
-      { error: "Failed to generate PDF report" },
+      { error: "Failed to generate PDF report", ...(detail && { detail }) },
       { status: 500 }
     );
   }

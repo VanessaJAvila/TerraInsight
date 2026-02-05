@@ -12,7 +12,7 @@ export const ACCEPTED_FILE_TYPES = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
 } as const;
 
-export const DEFAULT_WEBHOOK_URL = 'http://localhost:5680/webhook-test/eco-action';
+export const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook-test/eco-action";
 
 export const ANOMALY_KEYWORDS = {
   waste: ['waste', 'inefficiency', 'loss', 'leak', 'spillage'],

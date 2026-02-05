@@ -134,6 +134,12 @@ export default function ReportsPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleExportPDF}
+                        disabled={selectedReport.result.status !== "success"}
+                        title={
+                          selectedReport.result.status === "success"
+                            ? "Download PDF report"
+                            : "Export is only available for successful analyses"
+                        }
                         className="shrink-0"
                       >
                         <FileDown className="h-4 w-4 mr-2" />
@@ -147,6 +153,7 @@ export default function ReportsPage() {
                     <AnalysisDetailCard
                       result={selectedReport.result}
                       source={selectedReport.source}
+                      createdAt={selectedReport.createdAt}
                       generatedData={selectedReport.generatedData}
                     />
                   ) : (
