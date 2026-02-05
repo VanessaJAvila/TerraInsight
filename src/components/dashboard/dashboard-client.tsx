@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ProfessionalDropzone } from "./professional-dropzone";
 import { EcoAgent } from "./eco-agent";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,18 +13,20 @@ import { saveReports } from '@/lib/stores/reports-store';
 
 interface DashboardClientProps {
   readonly aiContext?: string;
+  readonly analysisResults: AnalysisResult[];
+  readonly setAnalysisResults: React.Dispatch<React.SetStateAction<AnalysisResult[]>>;
 }
 
-export function DashboardClient({ aiContext }: DashboardClientProps) {
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
-  const [contextFromFiles, setContextFromFiles] = useState<string>("");
+export function DashboardClient({ aiContext, analysisResults, setAnalysisResults }: DashboardClientProps) {
+  const contextFromFiles = useMemo(
+    () => convertAnalysisResultsToContext(analysisResults),
+    [analysisResults]
+  );
 
   const handleAnalysisComplete = useCallback((results: AnalysisResult[]) => {
     setAnalysisResults(results);
     saveReports(results, 'manual');
-    const newContext = convertAnalysisResultsToContext(results);
-    setContextFromFiles(newContext);
-  }, []);
+  }, [setAnalysisResults]);
 
   const combinedContext = [aiContext, contextFromFiles]
     .filter(Boolean)
@@ -38,8 +40,8 @@ export function DashboardClient({ aiContext }: DashboardClientProps) {
     try {
       const filename = `terrainsight-report-${new Date().toISOString().slice(0, 10)}.pdf`;
       await downloadPdfReport(successfulFiles, filename);
-    } catch (error) {
-      console.error('PDF export failed:', error);
+    } catch {
+      /* export failed */
     }
   }, [successfulFiles]);
 
@@ -94,7 +96,7 @@ export function DashboardClient({ aiContext }: DashboardClientProps) {
       <div className="min-h-0 flex flex-col">
         <Card className="flex flex-col min-h-[420px] max-h-[calc(100vh-8rem)] border-charcoal-800 bg-charcoal-900/50">
           <CardContent className="pt-6 flex-1 min-h-0 flex flex-col overflow-hidden">
-            <EcoAgent aiContext={combinedContext} />
+            <EcoAgent aiContext={combinedContext} hasDocuments={analysisResults.length > 0} />
           </CardContent>
         </Card>
       </div>
