@@ -8,11 +8,13 @@ export interface AgentSettings {
   envMode: EnvMode;
 }
 
-const DEFAULTS: AgentSettings = {
+export const AGENT_SETTINGS_DEFAULTS: AgentSettings = {
   n8nWebhookTest: "",
   isWorkflowEnabled: false,
   envMode: "test",
 };
+
+const DEFAULTS = AGENT_SETTINGS_DEFAULTS;
 
 export function getAgentSettings(): AgentSettings {
   if (globalThis.window === undefined) {
