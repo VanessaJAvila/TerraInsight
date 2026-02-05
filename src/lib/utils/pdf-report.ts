@@ -27,22 +27,23 @@ function renderAnomalySection(
   result: AnalysisResult,
   y: number
 ): number {
-  const anomaly = result.anomaly;
-  if (!anomaly?.detected) return y + 8;
+  const anomaly = result.anomaly ?? { detected: false, severity: "medium", issues: [], recommendations: [] };
+  if (!anomaly.detected) return y + 8;
   y += 4;
   doc.fontSize(12).font('Helvetica-Bold').fillColor('#b45309');
   y = addText(doc, `[!] Anomalies detected (${anomaly.severity ?? "medium"})`, y) + 4;
   doc.fontSize(11).font('Helvetica').fillColor('black');
-  for (const issue of anomaly.issues ?? []) {
-    y = addText(doc, `• ${issue}`, y);
+  const issues = Array.isArray(anomaly.issues) ? anomaly.issues : [];
+  for (const issue of issues) {
+    y = addText(doc, `• ${sanitizeText(String(issue))}`, y);
   }
-  const recs = anomaly.recommendations ?? [];
+  const recs = Array.isArray(anomaly.recommendations) ? anomaly.recommendations : [];
   if (recs.length > 0) {
     y += 4;
     doc.font('Helvetica-Bold').text('Recommendations:', MARGIN, y);
     y += LINE_HEIGHT;
     for (const rec of recs) {
-      y = addText(doc, `• ${rec}`, y);
+      y = addText(doc, `• ${sanitizeText(String(rec))}`, y);
     }
   }
   if (result.webhookTriggered) {
@@ -58,21 +59,24 @@ function renderResultSection(
   result: AnalysisResult,
   y: number
 ): number {
-  y = addSectionTitle(doc, result.filename ?? "Report", y);
-  y = addText(doc, result.summary ?? "No summary.", y) + 6;
-  const meta = result.metadata ?? {};
-  if (meta.pageCount) y = addText(doc, `Pages: ${meta.pageCount}`, y);
-  if (meta.rowCount) y = addText(doc, `Rows: ${meta.rowCount}`, y);
-  y = addText(doc, `Energy estimate: ${result.energyEstimate ?? 0} kWh`, y) + 8;
+  const filename = String(result?.filename ?? "Report");
+  const summary = String(result?.summary ?? "No summary.");
+  const meta = (result?.metadata && typeof result.metadata === "object" ? result.metadata : {}) as { pageCount?: number; rowCount?: number };
+  const energyEstimate = Number(result?.energyEstimate) || 0;
+  y = addSectionTitle(doc, filename, y);
+  y = addText(doc, summary, y) + 6;
+  if (meta.pageCount != null) y = addText(doc, `Pages: ${meta.pageCount}`, y);
+  if (meta.rowCount != null) y = addText(doc, `Rows: ${meta.rowCount}`, y);
+  y = addText(doc, `Energy estimate: ${energyEstimate} kWh`, y) + 8;
   return renderAnomalySection(doc, result, y);
 }
 
 export async function generateAnalysisReportPDF(results: AnalysisResult[]): Promise<Buffer> {
   const pdfkitModule = await import("pdfkit");
-  const PDFDocument =
-    (pdfkitModule as { default?: new (opts?: object) => PDFKit.PDFDocument }).default;
-  if (!PDFDocument) {
-    throw new Error("PDFKit default export not found; check pdfkit package.");
+  const mod = pdfkitModule as { default?: new (opts?: object) => PDFKit.PDFDocument; [key: string]: unknown };
+  const PDFDocument = mod.default ?? mod;
+  if (typeof PDFDocument !== "function") {
+    throw new TypeError("PDFKit constructor not found; check pdfkit package.");
   }
   const doc = new PDFDocument({ margin: MARGIN, size: "A4", bufferPages: true });
   const buffers: Buffer[] = [];
