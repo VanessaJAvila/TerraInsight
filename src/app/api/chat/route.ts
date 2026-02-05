@@ -69,10 +69,10 @@ async function triggerWebhook(
   config: WebhookConfig
 ): Promise<string> {
   if (!config.allowTrigger) {
-    return `ℹ️ Workflow triggers are disabled in Agent Settings. No webhook was called. Enable "Workflow triggers" in Agent Settings to alert the team automatically.`;
+    return `ℹ️ Workflow triggers are disabled in Integration Hub. No webhook was called. Enable "Workflow triggers" in Integration Hub to alert the team automatically.`;
   }
   if (!config.url) {
-    return `ℹ️ No webhook configured for ${config.envMode}. Set N8N_WEBHOOK_TEST (or prod) on the server or use Agent Settings test URL in dev.`;
+    return `ℹ️ No webhook configured for ${config.envMode}. Set N8N_WEBHOOK_TEST (or prod) on the server or use Integration Hub test URL in dev.`;
   }
   const url = config.url;
   const mode = config.envMode;

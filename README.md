@@ -6,6 +6,11 @@ Professional ecological impact analysis platform with AI-powered sustainability 
 
 TerraInsight is a Next.js 15 application that combines advanced AI analysis with sustainability expertise. The platform helps organizations track, analyze, and optimize their environmental impact through intelligent data processing and automated workflow triggers.
 
+## Important Links
+
+- **GitHub Repository:** https://github.com/VanessaJAvila/TerraInsight.git
+- **Live Demo:** https://terrainsight.vercel.app
+
 ## Core Features
 
 ### 🤖 **AI Sustainability Consultant**
@@ -46,7 +51,7 @@ N8N_WEBHOOK_PROD=https://your-n8n.example.com/webhook/eco-action
 ```
 
 - **OPENAI_API_KEY**: Required for the AI chat and analysis.
-- **N8N_WEBHOOK_TEST**: Used when Agent Settings environment mode is **Development/Sandbox** (e.g. local n8n). Server reads this from the server env; optional Test URL in Agent Settings is a fallback when `N8N_WEBHOOK_TEST` is not set.
+- **N8N_WEBHOOK_TEST**: Used when Integration Hub environment mode is **Development/Sandbox** (e.g. local n8n). Server reads this from the server env; optional Test URL in Integration Hub is a fallback when `N8N_WEBHOOK_TEST` is not set.
 - **N8N_WEBHOOK_PROD**: Used when environment mode is **Live/Production**; never exposed in the UI (server-only).
 
 ### 3. Start Development Server
@@ -257,6 +262,12 @@ Prioritized CSV and PDF to cover the most common industry standards for sustaina
 - **Medium**: Multiple indicators or significant consumption spike
 - **High**: Critical keywords + high numerical values
 
+## Known Limitations
+
+- Excel file support is planned but not yet implemented.
+- PDF parsing is text-based; scanned/image PDFs are not supported.
+- ngrok tunnel URL changes on restart; requires terminal open during demo.
+
 ## Sustainability Mission
 
 This platform promotes environmental responsibility through:
@@ -268,6 +279,82 @@ This platform promotes environmental responsibility through:
 Built with sustainability at its core - from code efficiency to environmental impact.
 
 ## Development & Deployment
+
+### Agentic Workflow — ngrok Tunnel & Evaluation Notes
+
+**Summary**
+
+- The automation feature (Agentic Workflow) sends payloads to n8n via a server-side webhook.
+- For the cloud demo, we use a secure tunnel (ngrok) that connects Vercel to a locally running n8n inside Docker. This allows demonstrating the full flow without hosting n8n in the cloud.
+
+**Critical Dependency (Important)**
+
+For automated webhooks to fire during evaluation, the following setup must be active:
+
+- The author's computer is powered on;
+- The Docker container running n8n is active locally;
+- The ngrok tunnel is running (ngrok terminal open);
+- The Vercel environment variable `N8N_WEBHOOK_PROD` points to the public ngrok URL (e.g. `https://xxxx.ngrok-free.dev/webhook/eco-action`).
+
+**How to Test the Full Flow (Step-by-step)**
+
+1. **Start n8n (Docker)**  
+   - If using docker-compose:
+     ```bash
+     docker-compose up -d n8n
+     ```
+   - Or with docker run (example):
+     ```bash
+     docker run -it --name n8n -p 5678:5678 n8nio/n8n
+     ```
+
+2. **Start the ngrok tunnel (on your PC)**  
+   - Sign up at https://dashboard.ngrok.com and get your authtoken.
+   - Configure the authtoken (once):
+     ```bash
+     ngrok authtoken <YOUR_AUTHTOKEN>
+     ```
+   - Create the tunnel (keep this terminal open during the demo):
+     ```bash
+     ngrok http 5678
+     ```
+   - Copy the HTTPS URL provided by ngrok (e.g. `https://abc123.ngrok-free.dev`).
+
+3. **Set local and production environment variables**  
+   - In local environment (`.env.local`):
+     ```env
+     OPENAI_API_KEY=sk-...
+     N8N_WEBHOOK_TEST=http://localhost:5678/webhook-test/eco-action
+     N8N_WEBHOOK_PROD=https://abc123.ngrok-free.dev/webhook/eco-action
+     NEXT_PUBLIC_APP_URL=http://localhost:3000
+     ```
+   - In Vercel: set `N8N_WEBHOOK_PROD` to the ngrok URL + `/webhook/eco-action` before deploying.
+
+4. **Verify the workflow**  
+   - Ensure the n8n Workflow is **Active** and the Webhook node uses the path `webhook/eco-action`.
+   - Open the app in production (Vercel) and upload `demo-data/csv/critical_waste.csv`.
+   - Watch the ngrok terminal — you should see a forwarded request; confirm in n8n that the workflow triggered.
+   - The app will show a trigger confirmation badge (when present).
+
+**For Evaluators — if the tunnel is offline**
+
+If the tunnel URL is not active (e.g. PC off), webhooks will not fire. The app gracefully degrades:
+
+- Local file analysis and AI chat continue to work (OpenAI API).
+- Automated triggers to n8n do not occur — you can test locally following the steps above or manually trigger via cURL:
+  ```bash
+  curl -X POST https://abc123.ngrok-free.dev/webhook/eco-action -H "Content-Type: application/json" -d '{"action":"test"}'
+  ```
+- Note to evaluator: full local setup instructions are provided to replicate the integration if desired.
+
+**Security and Production Behavior**
+
+- In production (Vercel), `N8N_WEBHOOK_PROD` is stored as a server-side environment variable and the app UI only shows a masked state (URL not exposed).
+- The integration page (Integration Hub) is locked for editing in production and displays a status indicator: "Tunnel Active" / "Tunnel Offline".
+
+**Demo Transparency**
+
+This solution demonstrates an end-to-end flow with a secure tunnel to enable real-time validation. For offline evaluation, the repository includes instructions to run the full stack locally.
 
 ### Code Quality Standards
 - **TypeScript**: Strict mode with comprehensive type coverage
@@ -356,7 +443,7 @@ curl -X POST http://localhost:3000/api/analyze \
 ```bash
 # Verify n8n is running on port 5678
 curl http://localhost:5678/webhook-test/eco-action
-# Set N8N_WEBHOOK_TEST and N8N_WEBHOOK_PROD in .env.local; toggle env in Agent Settings
+# Set N8N_WEBHOOK_TEST and N8N_WEBHOOK_PROD in .env.local; toggle env in Integration Hub
 ```
 
 **AI Agent Not Responding**

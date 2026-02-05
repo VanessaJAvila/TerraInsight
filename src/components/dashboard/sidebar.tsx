@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  Settings,
+  Activity,
   Leaf,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Impact Overview", icon: LayoutDashboard },
   { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/agent-settings", label: "Agent Settings", icon: Settings },
+  { href: "/agent-settings", label: "Integration Hub", icon: Activity },
 ];
 
 export function Sidebar() {

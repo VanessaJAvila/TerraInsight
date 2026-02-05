@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
     const anomaliesCount = results.filter((r) => r.anomaly.detected).length;
     let skipReason: string | undefined;
     if (!lastWebhookResult.triggered && anomaliesCount > 0) {
-      if (!allowTrigger) skipReason = "Workflow triggers disabled — enable in Agent Settings";
-      else if (!webhookUrl) skipReason = "No webhook URL — set N8N_WEBHOOK_TEST in .env or Test URL in Agent Settings";
+      if (!allowTrigger) skipReason = "Workflow triggers disabled — enable in Integration Hub";
+      else if (!webhookUrl) skipReason = "No webhook URL — set N8N_WEBHOOK_TEST in .env or Test URL in Integration Hub";
       else if (lastWebhookResult.status && lastWebhookResult.status >= 400) {
         const hint = parseN8nWebhookErrorHint(lastWebhookResult.detail);
         const base = hint ?? lastWebhookResult.detail ?? `Webhook returned ${lastWebhookResult.status}`;
