@@ -2,12 +2,13 @@
 
 import { FileText, FileSpreadsheet, File, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AnalysisResult } from "@/lib/types/analysis";
+import type { AnalysisResult, ReportSource } from "@/lib/types/analysis";
 import { getSeverityColor } from "@/lib/utils/analysis";
 
 interface AnalysisDetailCardProps {
   readonly result: AnalysisResult;
-  readonly source?: "manual" | "synthetic";
+  readonly source?: ReportSource;
+  readonly createdAt?: string;
   readonly generatedData?: {
     filename: string;
     recordCount: number;
@@ -29,9 +30,20 @@ function getFileIcon(fileType: string) {
   }
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function AnalysisDetailCard({
   result,
   source,
+  createdAt,
   generatedData,
   className,
 }: AnalysisDetailCardProps) {
@@ -50,20 +62,25 @@ export function AnalysisDetailCard({
         {getFileIcon(result.fileType)}
         <div>
           <p className="text-sm font-medium text-charcoal-200">{result.filename}</p>
-          <div className="flex items-center gap-3 text-xs text-charcoal-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-charcoal-400">
             {fileSize && <span>{fileSize}</span>}
-            {source && (
-              <span
-                className={cn(
-                  "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                  source === "synthetic"
-                    ? "bg-amber-500/20 text-amber-400"
-                    : "bg-charcoal-600 text-charcoal-300"
-                )}
-              >
-                {source === "synthetic" ? "Synthetic" : "Manual"}
-              </span>
-            )}
+            {createdAt && <span>{formatDate(createdAt)}</span>}
+            {source && (() => {
+              let badgeClass = "bg-slate-500/20 text-slate-400";
+              let label = "Manual";
+              if (source === "crisis") {
+                badgeClass = "bg-rose-500/20 text-rose-400";
+                label = "CRISIS";
+              } else if (source === "synthetic") {
+                badgeClass = "bg-amber-500/20 text-amber-400";
+                label = "Synthetic";
+              }
+              return (
+                <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", badgeClass)}>
+                  {label}
+                </span>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -95,9 +112,14 @@ export function AnalysisDetailCard({
             <span className="text-sm font-medium text-charcoal-200">
               Environmental Issues Detected ({result.anomaly.severity} priority)
             </span>
-            {result.webhookTriggered && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                ✅ Workflow Triggered
+            {result.webhookTriggered === true && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-400">
+                Eco-Action Sent to n8n
+              </span>
+            )}
+            {result.anomaly.detected && result.webhookTriggered !== true && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-medium text-amber-400">
+                n8n Connection Pending
               </span>
             )}
           </div>

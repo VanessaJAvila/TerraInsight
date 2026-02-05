@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, ChevronRight, FileDown } from "lucide-react";
+import { FileText, ChevronRight, FileDown, Loader2 } from "lucide-react";
 import { getStoredReports } from "@/lib/stores/reports-store";
 import { downloadPdfReport } from "@/lib/utils/pdf-download";
 import { AnalysisDetailCard } from "@/components/dashboard/analysis-detail-card";
@@ -24,6 +24,8 @@ function formatDate(iso: string): string {
 export default function ReportsPage() {
   const [reports, setReports] = useState<StoredReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<StoredReport | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     setReports(getStoredReports());
@@ -41,12 +43,18 @@ export default function ReportsPage() {
 
   const handleExportPDF = useCallback(async () => {
     if (!selectedReport) return;
+    setExportError(null);
+    setIsExporting(true);
     try {
-      const baseName = selectedReport.result.filename.replace(/\.[^.]+$/, '');
+      const baseName = selectedReport.result.filename.replace(/\.[^.]+$/, "");
       const filename = `terrainsight-${baseName}-report.pdf`;
       await downloadPdfReport([selectedReport.result], filename);
-    } catch (error) {
-      console.error('PDF export failed:', error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Export failed";
+      setExportError(message);
+      setTimeout(() => setExportError(null), 6000);
+    } finally {
+      setIsExporting(false);
     }
   }, [selectedReport]);
 
@@ -98,11 +106,21 @@ export default function ReportsPage() {
                               <p className="truncate text-sm font-medium">
                                 {report.result.filename}
                               </p>
-                              <p className="text-xs text-charcoal-500">
+                              <p className="text-xs text-charcoal-500 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                                 {formatDate(report.createdAt)}
+                                {report.source === "crisis" && (
+                                  <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-rose-500/20 text-rose-400">
+                                    CRISIS
+                                  </span>
+                                )}
                                 {report.source === "synthetic" && (
-                                  <span className="ml-1 text-amber-400">
-                                    · Synthetic
+                                  <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-400">
+                                    Synthetic
+                                  </span>
+                                )}
+                                {report.source === "manual" && (
+                                  <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-slate-500/20 text-slate-400">
+                                    Manual
                                   </span>
                                 )}
                               </p>
@@ -130,21 +148,37 @@ export default function ReportsPage() {
                       </CardDescription>
                     </div>
                     {selectedReport && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportPDF}
-                        disabled={selectedReport.result.status !== "success"}
-                        title={
-                          selectedReport.result.status === "success"
-                            ? "Download PDF report"
-                            : "Export is only available for successful analyses"
-                        }
-                        className="shrink-0"
-                      >
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </Button>
+                      <div className="flex flex-col items-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExportPDF}
+                          disabled={selectedReport.result.status !== "success" || isExporting}
+                          title={
+                            selectedReport.result.status === "success"
+                              ? "Download PDF report"
+                              : "Export is only available for successful analyses"
+                          }
+                          className="shrink-0"
+                        >
+                          {isExporting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Exporting…
+                            </>
+                          ) : (
+                            <>
+                              <FileDown className="h-4 w-4 mr-2" />
+                              Download PDF
+                            </>
+                          )}
+                        </Button>
+                        {exportError && (
+                          <p className="text-xs text-red-400" role="alert">
+                            {exportError}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardHeader>
