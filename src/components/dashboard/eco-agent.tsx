@@ -42,9 +42,10 @@ ${workflowLine}
 
 interface EcoAgentProps {
   readonly aiContext?: string;
+  readonly hasDocuments?: boolean;
 }
 
-export function EcoAgent({ aiContext }: EcoAgentProps) {
+export function EcoAgent({ aiContext, hasDocuments = false }: EcoAgentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
 
@@ -98,6 +99,14 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
   }, [messages, isLoading]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const demoButtonDisabled = isGeneratingDemo || isLoading || !hasDocuments;
+  const demoButtonTooltip = (() => {
+    if (isGeneratingDemo) return "Generating demo report…";
+    if (isLoading) return "Please wait…";
+    if (!hasDocuments) return "Upload a document first to run analyses and enable this demo.";
+    return "Generates a full dataset to explore platform capabilities.";
+  })();
   const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScrollAtRef = useRef(0);
   const SCROLL_THROTTLE_MS = 120;
@@ -160,6 +169,17 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
     );
   }
 
+  const handleDemoClick = () => {
+    if (demoButtonDisabled && !hasDocuments) {
+      append({
+        role: "assistant",
+        content: "📄 **Upload a document first.**\n\nUpload a sustainability report in the area to the left. Once analysis is ready, you can use this button to generate the demo report.",
+      });
+      return;
+    }
+    if (!demoButtonDisabled) void handleDemoGeneration();
+  };
+
   const handleDemoGeneration = async () => {
     setIsGeneratingDemo(true);
 
@@ -192,7 +212,6 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
       }
       
     } catch (error) {
-      console.error('Demo generation error:', error);
       append({
         role: 'assistant',
         content: '❌ **Demo Generation Error**\n\nFailed to connect to demo generation service. Please check your connection and try again.'
@@ -324,25 +343,34 @@ export function EcoAgent({ aiContext }: EcoAgentProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="mt-4 mb-3">
-        <Button
-          onClick={handleDemoGeneration}
-          disabled={isGeneratingDemo || isLoading}
-          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white border-emerald-500 shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
-          suppressHydrationWarning={true}
+      <div className="mt-4 mb-3 space-y-1">
+        <span
+          className={`inline-block w-full ${demoButtonDisabled ? "cursor-not-allowed" : ""}`}
+          title={demoButtonTooltip}
         >
-          {isGeneratingDemo ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Generating & Analyzing...
-            </>
-          ) : (
-            <>
-              <Wand2 className="h-4 w-4 mr-2" />
-              Generate & Analyze Demo Report
-            </>
-          )}
-        </Button>
+          <Button
+            onClick={handleDemoClick}
+            disabled={demoButtonDisabled}
+            aria-label={demoButtonTooltip}
+            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white border-emerald-500 shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 disabled:cursor-not-allowed"
+            suppressHydrationWarning={true}
+          >
+            {isGeneratingDemo ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating & Analyzing...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4 mr-2" />
+                Generate & Analyze Demo Report
+              </>
+            )}
+          </Button>
+        </span>
+        <p className="text-xs text-charcoal-500 text-center">
+          Generates a full dataset to explore platform capabilities.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-2">
