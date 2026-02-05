@@ -1,3 +1,7 @@
+/**
+ * File analysis API: PDF/CSV parsing, heuristic anomaly detection, optional n8n webhook.
+ * MVP focuses on CSV and PDF to balance structured data (CSV) with report context (PDF).
+ */
 import { NextRequest, NextResponse } from "next/server";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import {
@@ -7,7 +11,11 @@ import {
   calculateFileEnergyEstimate,
 } from "@/lib/utils/analysis";
 import { MAX_FILE_SIZE_BYTES, MAX_SAMPLE_ROWS } from "@/lib/constants/analysis";
-import { triggerN8nWebhook, resolveN8nWebhookUrl, type EnvMode } from "@/lib/webhook";
+import {
+  triggerN8nWebhook,
+  resolveN8nWebhookUrl,
+  type EnvMode,
+} from "@/lib/webhook";
 
 class PdfParseError extends Error {
   constructor(
@@ -35,6 +43,19 @@ type WebhookConfig = {
   allowTrigger: boolean;
   envMode: EnvMode;
 };
+
+/** Parses n8n error response body and returns a user-friendly message (hint or message). */
+function parseN8nWebhookErrorHint(detail: string | undefined): string | null {
+  if (!detail || typeof detail !== "string") return null;
+  try {
+    const parsed = JSON.parse(detail) as { hint?: string; message?: string };
+    if (parsed.hint && typeof parsed.hint === "string") return parsed.hint;
+    if (parsed.message && typeof parsed.message === "string") return parsed.message;
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
 
 function parseAnalyzeFormData(formData: FormData): {
   files: File[];
@@ -88,6 +109,10 @@ async function processAllFiles(
   return { results, lastWebhookResult };
 }
 
+/**
+ * Analyzes uploaded files, runs anomaly detection, and optionally triggers n8n webhook
+ * via shared utilities (resolveN8nWebhookUrl, triggerN8nWebhook). Response includes webhookStatus.
+ */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -104,21 +129,37 @@ export async function POST(request: NextRequest) {
     const webhookConfig: WebhookConfig = { url: webhookUrl, allowTrigger, envMode };
     const { results, lastWebhookResult } = await processAllFiles(files, webhookConfig);
 
+    const anomaliesCount = results.filter((r) => r.anomaly.detected).length;
+    let skipReason: string | undefined;
+    if (!lastWebhookResult.triggered && anomaliesCount > 0) {
+      if (!allowTrigger) skipReason = "Workflow triggers disabled — enable in Agent Settings";
+      else if (!webhookUrl) skipReason = "No webhook URL — set N8N_WEBHOOK_TEST in .env or Test URL in Agent Settings";
+      else if (lastWebhookResult.status && lastWebhookResult.status >= 400) {
+        const hint = parseN8nWebhookErrorHint(lastWebhookResult.detail);
+        const base = hint ?? lastWebhookResult.detail ?? `Webhook returned ${lastWebhookResult.status}`;
+        skipReason = lastWebhookResult.status === 404 && hint
+          ? `${base} To have the webhook always listening (no need to click in n8n), activate the workflow in n8n.`
+          : base;
+      }
+    }
+
+    const webhookStatus = {
+      triggered: lastWebhookResult.triggered,
+      envMode: lastWebhookResult.envMode,
+      status: lastWebhookResult.status,
+      detail: lastWebhookResult.detail,
+      ...(skipReason && { skipReason }),
+    };
     return NextResponse.json({
       success: true,
       message: "Analysis complete",
       results,
       totalFiles: files.length,
       anomaliesDetected: results.filter((r) => r.anomaly.detected).length,
-      webhook: {
-        triggered: lastWebhookResult.triggered,
-        envMode: lastWebhookResult.envMode,
-        status: lastWebhookResult.status,
-        detail: lastWebhookResult.detail,
-      },
+      webhook: webhookStatus,
+      webhookStatus,
     });
   } catch (error) {
-    console.error("Analysis API error:", error);
     return NextResponse.json({ error: "Failed to analyze files" }, { status: 500 });
   }
 }
@@ -185,8 +226,6 @@ async function processFile(
       status: triggerResult.status,
       detail: triggerResult.detail,
     };
-  } else if (anomaly.detected && webhookConfig.allowTrigger && !webhookConfig.url) {
-    console.log("N8N SKIPPED: no webhook configured");
   }
 
   return {
@@ -211,7 +250,6 @@ async function parsePDF(file: File, filename: string): Promise<{ text: string; p
     data = await file.arrayBuffer();
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to read file';
-    console.error(`PDF parse failed: ${filename} - ${msg}`);
     throw new PdfParseError('Failed to read PDF file', msg, filename);
   }
 
@@ -220,14 +258,12 @@ async function parsePDF(file: File, filename: string): Promise<{ text: string; p
   try {
     const pdf = await getDocumentProxy(new Uint8Array(data));
     const { totalPages, text } = await extractText(pdf, { mergePages: true });
-    console.log(`PDF parsed OK: ${filename} (${text?.length ?? 0} chars)`);
     return {
       text: text ?? '',
       pageCount: totalPages ?? 0,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown parse error';
-    console.error(`PDF parse failed: ${filename} - ${msg}`, err);
     throw new PdfParseError('PDF parsing failed', msg, filename);
   }
 }
