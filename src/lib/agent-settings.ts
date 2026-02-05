@@ -43,9 +43,9 @@ export function setAgentSettings(settings: Partial<AgentSettings>): void {
   if (globalThis.window !== undefined) {
     try {
       globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.warn("Agent settings save failed:", e);
-    }
+  } catch {
+    /* save failed */
+  }
   }
 }
 

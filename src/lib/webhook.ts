@@ -83,12 +83,7 @@ export function resolveN8nWebhookUrl(
   }
 
   const fallback = (n8nWebhookTestFromClient ?? "").trim();
-  if (fallback) {
-    if (typeof console !== "undefined" && console.warn) {
-      console.warn("N8N: N8N_WEBHOOK_TEST not set; using client-provided test URL fallback.", maskUrlForLog(fallback));
-    }
-    return { url: fallback };
-  }
+  if (fallback) return { url: fallback };
 
   return { url: null };
 }
@@ -137,21 +132,6 @@ export function isRetriableTriggerResult(result: N8nTriggerResult): boolean {
   return result.status >= RETRY_ON_STATUS_MIN && result.status < 600;
 }
 
-function logTriggerSuccess(envMode: EnvMode, maskedUrl: string, status: number): void {
-  if (typeof console !== "undefined" && console.log) {
-    console.log("N8N TRIGGER", envMode, maskedUrl, "status", status);
-  }
-}
-
-function logTriggerFailure(envMode: EnvMode, maskedUrl: string, isTimeout: boolean, message: string): void {
-  if (typeof console !== "undefined" && console.error) {
-    console.error("N8N TRIGGER failed", envMode, maskedUrl, isTimeout ? "timeout" : message);
-  }
-  if (isTimeout && typeof console !== "undefined" && console.warn) {
-    console.warn("N8N: Webhook timed out. Set n8n Webhook Response Mode to 'Immediately' for faster response.");
-  }
-}
-
 function resultFromError(error: unknown): N8nTriggerResult {
   const message = error instanceof Error ? error.message : String(error);
   const isTimeout = error instanceof Error && error.name === "AbortError";
@@ -180,21 +160,12 @@ export async function runOneWebhookAttempt(
   try {
     const { status, body, ok } = await executeWebhookFetch(url, payload, controller.signal);
     clearTimeout(timeoutId);
-    logTriggerSuccess(envMode, maskedUrl, status);
 
-    if (!ok) {
-      if (body && typeof console !== "undefined" && console.log) {
-        console.log("N8N TRIGGER non-2xx body length:", body.length);
-      }
-      return { ok: false, status, detail: body || `HTTP ${status}` };
-    }
+    if (!ok) return { ok: false, status, detail: body || `HTTP ${status}` };
     return { ok: true, status, detail: undefined };
   } catch (error) {
     clearTimeout(timeoutId);
-    const res = resultFromError(error);
-    const isTimeout = error instanceof Error && error.name === "AbortError";
-    logTriggerFailure(envMode, maskedUrl, isTimeout, res.detail ?? "");
-    return res;
+    return resultFromError(error);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -216,12 +187,7 @@ export async function triggerN8nWebhook(
   envMode: EnvMode
 ): Promise<N8nTriggerResult> {
   const validation = validateWebhookUrl(url);
-  if (!validation.valid) {
-    if (typeof console !== "undefined" && console.error) {
-      console.error("N8N TRIGGER skipped:", validation.error);
-    }
-    return { ok: false, status: 0, detail: validation.error };
-  }
+  if (!validation.valid) return { ok: false, status: 0, detail: validation.error };
 
   const masked = maskUrlForLog(url);
   const first = await runOneWebhookAttempt(url, payload, envMode, masked);
