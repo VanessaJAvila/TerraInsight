@@ -105,9 +105,12 @@ export function ProfessionalDropzone({
       if (n8nWebhookTest) formData.append("n8nWebhookTest", n8nWebhookTest);
 
       const progressInterval = setInterval(() => updateProgress(newFiles), PROGRESS_UPDATE_INTERVAL);
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
+      const url = globalThis.window === undefined ? "/api/analyze" : `${globalThis.location.origin}/api/analyze`;
+      const response = await fetch(url, {
+        method: "POST",
         body: formData,
+        mode: "same-origin",
+        cache: "no-store",
       });
 
       clearInterval(progressInterval);
@@ -128,7 +131,14 @@ export function ProfessionalDropzone({
       }
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
+      const raw = error instanceof Error ? error.message : "Analysis failed";
+      const isNetworkError =
+        raw === "Failed to fetch" ||
+        raw.includes("ERR_INTERNET_DISCONNECTED") ||
+        raw.includes("NetworkError");
+      const errorMessage = isNetworkError
+        ? "Network error — ensure the dev server is running (npm run dev) and DevTools Network throttling is set to “No throttling”."
+        : raw;
       updateWithError(newFiles, errorMessage);
     } finally {
       setIsAnalyzing(false);
@@ -233,22 +243,14 @@ export function ProfessionalDropzone({
                 </>
               )}
             </p>
-            <div className="flex items-center justify-center space-x-6 text-xs text-charcoal-400 pt-2">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span>PDF Reports</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span>CSV Data</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span>Excel Files</span>
-              </div>
-            </div>
+            <p className="text-xs text-charcoal-400 pt-2">
+              PDF Reports • CSV Data <span className="text-charcoal-500">(Excel support coming soon)</span>
+            </p>
             <p className="text-xs text-charcoal-500 pt-1">
               Enterprise-grade processing • Up to 10MB • AI-powered anomaly detection
+            </p>
+            <p className="text-xs text-charcoal-500/90 pt-0.5" title="MVP focus: CSV for tabular energy data and PDF for official sustainability reports.">
+              MVP focus: CSV for tabular energy data and PDF for official sustainability reports.
             </p>
           </div>
 
@@ -332,9 +334,14 @@ export function ProfessionalDropzone({
                         <span className="text-sm font-medium text-charcoal-200">
                           Environmental Issues Detected ({fileProgress.result.anomaly.severity} priority)
                         </span>
-                        {fileProgress.result.webhookTriggered && (
-                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                            ✅ Workflow Triggered
+                        {fileProgress.result.webhookTriggered === true && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-400">
+                            Eco-Action Sent to n8n
+                          </span>
+                        )}
+                        {fileProgress.result.anomaly.detected && fileProgress.result.webhookTriggered !== true && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-medium text-amber-400">
+                            n8n Connection Pending
                           </span>
                         )}
                       </div>

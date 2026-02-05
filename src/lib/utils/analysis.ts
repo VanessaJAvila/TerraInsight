@@ -1,3 +1,10 @@
+/**
+ * Analysis utilities for TerraInsight file processing.
+ *
+ * MVP focuses on CSV and PDF to balance structured data analysis (CSV) with
+ * contextual report parsing (PDF), covering the majority of industry-standard
+ * sustainability exports. Excel (.xlsx) support is planned for a future release.
+ */
 import type { AnalysisResult, AnomalyDetection } from '@/lib/types/analysis';
 import {
   MAX_CONTEXT_LENGTH,
