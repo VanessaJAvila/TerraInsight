@@ -1,3 +1,6 @@
+/** Distinct report sources for badges and filtering. Gray=Manual, Amber=Synthetic, Red=Crisis, Emerald=Success. */
+export type ReportSource = "manual" | "synthetic" | "crisis";
+
 export interface AnomalyDetection {
   detected: boolean;
   severity: 'low' | 'medium' | 'high';
@@ -35,7 +38,7 @@ export interface FileProgress {
 export interface StoredReport {
   id: string;
   createdAt: string;
-  source: 'manual' | 'synthetic';
+  source: ReportSource;
   result: AnalysisResult;
   generatedData?: {
     filename: string;

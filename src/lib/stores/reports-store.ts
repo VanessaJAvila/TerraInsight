@@ -1,4 +1,4 @@
-import type { AnalysisResult, StoredReport } from "@/lib/types/analysis";
+import type { AnalysisResult, ReportSource, StoredReport } from "@/lib/types/analysis";
 
 const STORAGE_KEY = "terra-reports";
 const MAX_STORED_REPORTS = 50;
@@ -21,7 +21,7 @@ export function getStoredReports(): StoredReport[] {
 
 export function saveReport(
   result: AnalysisResult,
-  source: 'manual' | 'synthetic',
+  source: ReportSource,
   generatedData?: { filename: string; recordCount: number; criticalValues: number; maxConsumption: number }
 ): StoredReport {
   const report: StoredReport = {
@@ -29,7 +29,7 @@ export function saveReport(
     createdAt: new Date().toISOString(),
     source,
     result,
-    ...(source === 'synthetic' && generatedData ? { generatedData } : {}),
+    ...((source === "synthetic" || source === "crisis") && generatedData ? { generatedData } : {}),
   };
   const reports = getStoredReports();
   reports.unshift(report);
@@ -46,6 +46,6 @@ export function saveReport(
   return report;
 }
 
-export function saveReports(results: AnalysisResult[], source: 'manual' | 'synthetic'): StoredReport[] {
+export function saveReports(results: AnalysisResult[], source: ReportSource): StoredReport[] {
   return results.map((r) => saveReport(r, source));
 }
