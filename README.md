@@ -38,15 +38,16 @@ cp .env.local.example .env.local
 ```
 
 Add your OpenAI API key and n8n webhook URLs to `.env.local`:
+
 ```env
 OPENAI_API_KEY=sk-your-api-key-here
-N8N_WEBHOOK_TEST=http://localhost:5680/webhook-test/eco-action
+N8N_WEBHOOK_TEST=http://localhost:5678/webhook-test/eco-action
 N8N_WEBHOOK_PROD=https://your-n8n.example.com/webhook/eco-action
 ```
 
-- **N8N_WEBHOOK_TEST**: Used when Agent Settings env mode is **Test** (e.g. local n8n).
-- **N8N_WEBHOOK_PROD**: Used when env mode is **Production**; never exposed in the UI.
-- In Agent Settings you can toggle **Test** vs **Production** and **Enable workflow triggers**. Production URL is only read from the server env; the optional Test URL field is a dev fallback when `N8N_WEBHOOK_TEST` is not set.
+- **OPENAI_API_KEY**: Required for the AI chat and analysis.
+- **N8N_WEBHOOK_TEST**: Used when Agent Settings environment mode is **Development/Sandbox** (e.g. local n8n). Server reads this from the server env; optional Test URL in Agent Settings is a fallback when `N8N_WEBHOOK_TEST` is not set.
+- **N8N_WEBHOOK_PROD**: Used when environment mode is **Live/Production**; never exposed in the UI (server-only).
 
 ### 3. Start Development Server
 ```bash
@@ -56,6 +57,16 @@ npm run dev
 Access the application at [http://localhost:3000](http://localhost:3000)
 
 ## Testing & Demo Data
+
+### Testing & Coverage
+
+Run unit and integration tests with coverage:
+
+```bash
+npm test
+```
+
+Coverage reports are generated in `coverage/`. Open **`coverage/lcov-report/index.html`** in a browser to view the full report. Tests cover critical webhook logic (e.g. `resolveN8nWebhookUrl`, `triggerN8nWebhook`) and support end-to-end flows. Coverage helps ensure code quality and maintainability for evaluators and contributors.
 
 ### Demo Data Generation
 
@@ -141,12 +152,14 @@ To enable automated sustainability workflows:
    npx n8n start
    ```
 
-2. **Create webhook workflow**:
-   - Access n8n at http://localhost:5680
-   - Create new workflow with Webhook node
-   - Configure path: `webhook-test/eco-action`
-   - Set method: POST
-   - Activate workflow
+2. **Create webhook workflow** (so it listens without opening n8n UI):
+   - Access n8n at http://localhost:5678
+   - Create new workflow with Webhook node (path e.g. `webhook-test/eco-action`, method POST)
+   - Set Webhook node **Response Mode** to **"Immediately"** so TerraInsight gets a fast response
+   - **Activate** the workflow (toggle On)—then the webhook URL is **always listening**; no need to click "Listen for test event" in the dashboard
+   - Use that workflow’s **Production** URL in `.env.local` as `N8N_WEBHOOK_TEST` for dev (or the Test URL only if you’re okay manually starting "Listen for test event" each time)
+
+> **Pro-Tip for Evaluators:** To test the Agentic Workflow without manual intervention, ensure the n8n workflow is set to **Active**. This allows TerraInsight to trigger actions 24/7 without needing to click "Listen for test event" in the n8n UI.
 
 ## Architecture
 
@@ -196,7 +209,7 @@ Intelligent analysis of uploaded sustainability data:
 - **PDF Processing**: `pdf-parse` with dynamic imports
 - **CSV Analysis**: `papaparse` with header detection and validation
 - **File Validation**: Multi-format support with type safety
-- **Energy Estimation**: Token-based consumption tracking
+- **Energy estimation**: kWh consumption estimates (file processing and chat usage)
 
 ### Professional Integration
 - **Workflow Automation**: n8n webhook integration for critical alerts
@@ -331,13 +344,13 @@ curl -X POST http://localhost:3000/api/analyze \
   -F "files=@demo-data/csv/critical_waste.csv" \
   -F "envMode=test" \
   -F "allowTrigger=true"
-# Optional: -F "n8nWebhookTest=http://localhost:5680/webhook-test/eco-action" if N8N_WEBHOOK_TEST is not set
+# Optional: -F "n8nWebhookTest=http://localhost:5678/webhook-test/eco-action" if N8N_WEBHOOK_TEST is not set
 ```
 
 **n8n Webhook Not Triggering**
 ```bash
-# Verify n8n is running on port 5680
-curl http://localhost:5680/webhook-test/eco-action
+# Verify n8n is running on port 5678
+curl http://localhost:5678/webhook-test/eco-action
 # Set N8N_WEBHOOK_TEST and N8N_WEBHOOK_PROD in .env.local; toggle env in Agent Settings
 ```
 
