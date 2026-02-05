@@ -13,6 +13,19 @@ type WebhookConfig = {
   envMode: string;
 };
 
+/** Parses n8n error body and returns the hint or message for user-facing text. */
+function parseN8nErrorHint(body: string): string | null {
+  if (!body || typeof body !== "string") return null;
+  try {
+    const parsed = JSON.parse(body) as { hint?: string; message?: string };
+    if (parsed.hint && typeof parsed.hint === "string") return parsed.hint;
+    if (parsed.message && typeof parsed.message === "string") return parsed.message;
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
+
 const SYSTEM_PROMPT = `You are EcoPulse AI, a professional sustainability consultant with expertise in environmental impact analysis.
 
 CAPABILITIES:
@@ -69,13 +82,18 @@ async function triggerWebhook(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    console.log(`[EcoPulse] Webhook triggered | mode=${mode} | url=${url} | status=${response.status}`);
-    return response.ok
-      ? `✅ Sustainability workflow has been triggered successfully (${mode}). The team has been alerted about this environmental issue and will take appropriate action.`
-      : `⚠️ Alert attempted but workflow trigger returned status ${response.status}. Please check the sustainability team dashboard.`;
+    if (response.ok) {
+      return `✅ Sustainability workflow has been triggered successfully (${mode}). The team has been alerted about this environmental issue and will take appropriate action.`;
+    }
+    const body = await response.text();
+    const hint = parseN8nErrorHint(body);
+    const detail = hint ?? `Webhook returned ${response.status}. Please check the sustainability team dashboard.`;
+    const alwaysListen = response.status === 404 && hint
+      ? " To have the webhook always listening (no need to click in n8n), activate the workflow in n8n."
+      : "";
+    return `⚠️ Workflow trigger failed (${response.status}). ${detail}${alwaysListen}`;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[EcoPulse] Webhook trigger failed | mode=${mode} | url=${url}`, error);
     return `⚠️ Unable to trigger workflow (${errorMessage}). Please notify the sustainability team manually.`;
   }
 }
