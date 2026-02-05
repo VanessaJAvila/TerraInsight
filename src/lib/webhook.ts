@@ -83,7 +83,12 @@ export function resolveN8nWebhookUrl(
   }
 
   const fallback = (n8nWebhookTestFromClient ?? "").trim();
-  if (fallback) return { url: fallback };
+  if (fallback) {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn("[n8n] N8N_WEBHOOK_TEST not set; using client-provided test URL.");
+    }
+    return { url: fallback };
+  }
 
   return { url: null };
 }

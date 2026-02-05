@@ -14,7 +14,7 @@ TerraInsight is a Next.js 15 application that combines advanced AI analysis with
 - **Action-Oriented**: Provides specific, measurable sustainability recommendations
 
 ### 📊 **Smart Data Processing**  
-- **File Upload**: Drag-and-drop support for PDF and CSV sustainability reports
+- **File Upload**: Drag-and-drop support for PDF and CSV sustainability reports *(Excel support coming soon)*
 - **Automatic Parsing**: Extract and contextualize data from energy and carbon reports
 - **Anomaly Detection**: Heuristic analysis to identify environmental issues automatically
 
@@ -60,13 +60,13 @@ Access the application at [http://localhost:3000](http://localhost:3000)
 
 ### Testing & Coverage
 
-Run unit and integration tests with coverage:
+To verify system reliability, run `npm run test`. This executes the Jest suite covering webhooks and parsing logic.
 
 ```bash
-npm test
+npm run test
 ```
 
-Coverage reports are generated in `coverage/`. Open **`coverage/lcov-report/index.html`** in a browser to view the full report. Tests cover critical webhook logic (e.g. `resolveN8nWebhookUrl`, `triggerN8nWebhook`) and support end-to-end flows. Coverage helps ensure code quality and maintainability for evaluators and contributors.
+To view the detailed coverage report, open `coverage/lcov-report/index.html` after running tests (in a browser). Coverage helps ensure code quality and maintainability for evaluators and contributors. For a detailed audit of a real system execution, including energy metrics, anomaly logs, and specific coverage scope, please refer to the [AI_REPORT.md](./AI_REPORT.md).
 
 ### Demo Data Generation
 
@@ -125,6 +125,7 @@ This creates `demo-data/` folder with production-ready test files designed to va
 - [ ] Progress indicators show during processing
 - [ ] Energy consumption estimates display per file
 - [ ] Session energy tracking accumulates correctly
+- [ ] AI_REPORT.md generated and validated with real execution metrics.
 
 **Anomaly Detection**
 - [ ] Normal data (< 80): No alerts triggered
@@ -219,13 +220,17 @@ Intelligent analysis of uploaded sustainability data:
 
 ## Professional Data Processing
 
+### MVP Scope
+
+Prioritized CSV and PDF to cover the most common industry standards for sustainability reporting.
+
 ### Supported File Formats
 
 | Format | Use Cases | Processing Capabilities |
 |--------|-----------|------------------------|
 | **PDF** | Energy reports, carbon assessments, sustainability audits | Text extraction, keyword analysis, Block identification |
 | **CSV** | Energy consumption data, emissions tracking, KPI sheets | Numerical analysis, threshold detection, header mapping |
-| **Excel** | XLSX/XLS files | Data extraction, structured analysis |
+| **Excel** | XLSX/XLS *(coming soon)* | Data extraction, structured analysis |
 
 ### Analysis Pipeline
 

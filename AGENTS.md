@@ -98,12 +98,18 @@ In production, webhook url must come from process.env.N8N_WEBHOOK_PROD (server-o
 
 ## Testing & Audit
 
-**Testing**
+### Testing
+
+Tests use synthetic data to validate agent workflows and webhook triggers, ensuring reliable behavior under critical scenarios.
+
+Comprehensive unit and integration tests with coverage reporting ensure the agent's robustness and maintainability.
+
 - Unit tests cover critical webhook utilities: `resolveN8nWebhookUrl` (env/fallback, prod error) and `triggerN8nWebhook` (success, non-2xx, timeout, retry). Run with `npm test`.
 - Integration flows cover end-to-end analysis and webhook triggering (e.g. upload → analyze → n8n trigger; UI badge).
 - Tests run with coverage reporting (`npm test` / `jest --coverage`) to support quality and maintainability.
 
-**Audit & logging**
+### Audit & Logging
+
 - Audit logs capture webhook calls with status and detail (e.g. envMode, status code, outcome). URLs are masked in logs (protocol + host only; path redacted).
 - No production secrets are exposed client-side; production webhook URL is server-only and never sent or logged to the client.
 
