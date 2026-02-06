@@ -1,5 +1,29 @@
 # AI Run Report — TerraInsight EcoPulse
 
+## Tech Stack & AI Orchestration Tools
+
+This project was developed using an "AI-First" workflow, leveraging advanced agents and automation to ensure high-speed delivery and code quality.
+
+### Development & AI Assistance
+
+- **Abacus.AI (Gemini 3 Flash):** Primary AI Architect used for strategic planning, complex debugging, n8n workflow design, and documentation governance.
+- **Cursor (Composer Mode):** AI-native IDE used for rapid prototyping, refactoring, and real-time implementation of frontend/backend logic.
+- **OpenAI GPT-4o-mini:** Integrated via API to power the in-app EcoPulse AI Chat, providing real-time sustainability insights to the end-user.
+
+### Infrastructure & Automation
+
+- **n8n:** Low-code workflow engine used as the "Central Nervous System" for incident response and Human-in-the-Loop (HITL) approvals.
+- **ngrok:** Secure tunneling to bridge the local n8n orchestration with the Vercel cloud environment.
+- **Mailtrap:** SMTP Sandbox for secure validation of the automated email alert system.
+
+### Core Engineering
+
+- **Next.js 15 (App Router) & TypeScript:** For a robust, type-safe full-stack architecture.
+- **Vercel:** Production hosting and environment variable management.
+- **Jest:** Unit testing framework for critical business logic (webhooks & heuristics).
+
+---
+
 **Run ID:** `run_20260204_1530`  
 **Date:** 2026-02-04T15:30:00Z  
 **Validation Date:** 2026-02-06  
@@ -131,16 +155,19 @@ Standard mitigation for webhook timeout: single retry after 800 ms; set n8n Webh
 ## 8. Reproduction Steps
 
 **Environment:**
+
 - **Node:** 20.20.0 (or >= 20.20.0 per `package.json` engines)
 - **.env.local:** `OPENAI_API_KEY` set; `N8N_WEBHOOK_TEST=http://localhost:5678/webhook-test/eco-action`
 
 **Commands:**
+
 ```bash
 npm install
 npm run test
 npm run seed
 npm run dev
 ```
+
 - `npm run test` runs Jest with coverage (output in `coverage/`). All unit tests pass in the current report.
 - Open http://localhost:3000. Go to **Impact Overview** or **Reports**. Upload files from `demo-data/csv/` and `demo-data/pdf/`: `green_report.csv`, `anomaly_report.csv`, `critical_waste.csv`, `sustainability_summary.pdf`, `audit_report_critical.pdf`. Enable **Workflow triggers** in Agent Settings; ensure env mode is **Development/Sandbox** (test). Run analysis.
 
@@ -196,3 +223,11 @@ npm run dev
 |------------|-----------|
 | No E2E test for full analyze → webhook flow | Add E2E in CI |
 | PDF parsing is text-only (unpdf) | Document supported formats; scanned/image PDFs not supported |
+
+This report demonstrates a fully functional AI-powered sustainability analysis pipeline, integrating heuristic detection, workflow automation, and human approval. The system is designed for scalability and future enhancements including E2E testing and advanced PDF parsing.
+
+---
+
+## Acknowledgements
+
+This project leveraged advanced AI-assisted development tools including Abacus.AI for strategic planning and debugging, and Cursor as an AI-native IDE for rapid prototyping and implementation. These tools significantly accelerated development and ensured high code quality.
