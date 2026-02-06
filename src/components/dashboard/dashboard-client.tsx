@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ProfessionalDropzone } from "./professional-dropzone";
 import { EcoAgent } from "./eco-agent";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { FileDown, AlertCircle } from "lucide-react";
 import type { AnalysisResult } from '@/lib/types/analysis';
 import { convertAnalysisResultsToContext } from '@/lib/utils/analysis';
 import { downloadPdfReport } from '@/lib/utils/pdf-download';
@@ -18,6 +18,8 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ aiContext, analysisResults, setAnalysisResults }: DashboardClientProps) {
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const contextFromFiles = useMemo(
     () => convertAnalysisResultsToContext(analysisResults),
     [analysisResults]
@@ -37,11 +39,15 @@ export function DashboardClient({ aiContext, analysisResults, setAnalysisResults
   const totalEnergyEstimate = successfulFiles.reduce((sum, r) => sum + r.energyEstimate, 0);
 
   const handleExportPDF = useCallback(async () => {
+    setExportError(null);
     try {
       const filename = `terrainsight-report-${new Date().toISOString().slice(0, 10)}.pdf`;
       await downloadPdfReport(successfulFiles, filename);
-    } catch {
-      /* export failed */
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[DashboardClient] PDF export failed:", error);
+      }
+      setExportError("Unable to download PDF. Please try again.");
     }
   }, [successfulFiles]);
 
@@ -73,15 +79,23 @@ export function DashboardClient({ aiContext, analysisResults, setAnalysisResults
             <CardDescription className="flex items-center justify-between gap-4">
               <span>Upload sustainability reports for AI-powered analysis and anomaly detection</span>
               {successfulFiles.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportPDF}
-                  className="shrink-0"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportPDF}
+                    className="shrink-0"
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
+                  {exportError && (
+                    <p className="text-xs text-red-400 flex items-center gap-1" role="alert">
+                      <AlertCircle className="h-3 w-3" />
+                      {exportError}
+                    </p>
+                  )}
+                </div>
               )}
             </CardDescription>
           </CardHeader>
