@@ -24,7 +24,7 @@ function buildDemoSummaryContent(result: {
     ? `🔍 **Issues**: ${analysis.anomaly.issues.join('; ')}`
     : '';
   const workflowLine = analysis.webhookTriggered
-    ? '✅ **Workflow Triggered**: n8n automation activated'
+    ? '✅ **Eco-Action sent to n8n**: Alert sent'
     : '';
   return `🎯 **Agentic Analysis Complete!**
 
@@ -74,7 +74,7 @@ export function EcoAgent({ aiContext, hasDocuments = false }: EcoAgentProps) {
         {
           id: "welcome",
           role: "assistant",
-          content: `🌿 **Welcome to EcoPulse AI**\n\nI'm your ecological impact analyst. I can help you:\n\n• Analyze carbon footprint from energy reports\n• Identify waste reduction opportunities\n• Suggest sustainability actions (triggers green workflows)\n• Compare emissions across periods\n\nUpload a report or ask me anything about your ecological impact.`,
+          content: `🌿 **I am EcoPulse AI, the intelligence engine of TerraInsight.**\n\nI can help you:\n\n• Analyze carbon footprint from energy reports\n• Identify waste reduction opportunities\n• Suggest sustainability actions (triggers green workflows)\n• Compare emissions across periods\n\nUpload a report or ask me anything about your ecological impact.`,
         },
       ],
       body: chatBody,

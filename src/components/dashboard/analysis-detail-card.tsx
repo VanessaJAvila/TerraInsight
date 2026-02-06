@@ -60,8 +60,20 @@ export function AnalysisDetailCard({
     >
       <div className="flex items-center gap-3">
         {getFileIcon(result.fileType)}
-        <div>
-          <p className="text-sm font-medium text-charcoal-200">{result.filename}</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-medium text-charcoal-200">{result.filename}</p>
+            {result.webhookTriggered === true && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-400">
+                Eco-Action Sent to n8n
+              </span>
+            )}
+            {result.anomaly.detected && result.webhookTriggered !== true && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-medium text-amber-400">
+                n8n Connection Pending
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-charcoal-400">
             {fileSize && <span>{fileSize}</span>}
             {createdAt && <span>{formatDate(createdAt)}</span>}
@@ -112,16 +124,6 @@ export function AnalysisDetailCard({
             <span className="text-sm font-medium text-charcoal-200">
               Environmental Issues Detected ({result.anomaly.severity} priority)
             </span>
-            {result.webhookTriggered === true && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-400">
-                Eco-Action Sent to n8n
-              </span>
-            )}
-            {result.anomaly.detected && result.webhookTriggered !== true && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-medium text-amber-400">
-                n8n Connection Pending
-              </span>
-            )}
           </div>
           <div className="space-y-2 text-xs">
             <div>
