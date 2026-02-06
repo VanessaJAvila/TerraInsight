@@ -28,6 +28,23 @@ TerraInsight is a Next.js 15 application that combines advanced AI analysis with
 - **Environmental Alerts**: Detection of anomalies and inefficiencies triggers team notifications
 - **Professional Integration**: Seamless connection to existing sustainability management systems
 
+## 🔄 Agentic Workflow & Governance
+
+TerraInsight implements a **Human-in-the-Loop (HITL)** architecture to ensure AI-driven decisions are supervised by experts before execution.
+
+### 🛡️ Human-in-the-Loop Flow
+1. **Detection:** The AI Agent identifies a high-severity environmental anomaly (e.g., critical waste or energy spikes).
+2. **Orchestration:** Via **n8n**, a specialized workflow is triggered, decoupling business logic from the frontend.
+3. **Authorization:** Instead of autonomous execution, the system sends a professional alert to the **Mailtrap SMTP Sandbox** (development) or the configured SMTP provider (production).
+4. **Human Review:** A manager reviews the technical details in the email and performs the approval/rejection directly within the n8n workflow interface.
+5. **Execution:** Only after explicit human authorization does the workflow proceed with mitigation protocols.
+
+### 🧪 Professional Sandboxing
+For the MVP, we utilize **Mailtrap** as an SMTP Sandbox. This demonstrates a production-ready mindset:
+- **Safety:** Prevents accidental email blasts during development.
+- **Observability:** Provides a centralized dashboard to audit all automated communications.
+- **Staging Excellence:** Simulates real-world enterprise mail servers (like SendGrid or AWS SES) without infrastructure overhead.
+
 ## Quick Start
 
 ### 1. Installation
@@ -38,18 +55,26 @@ npm install
 ```
 
 ### 2. Environment Configuration
+
 ```bash
 cp .env.local.example .env.local
 ```
 
-Add your OpenAI API key and n8n webhook URLs to `.env.local`:
+Edit `.env.local` and add the following:
 
 ```env
-OPENAI_API_KEY=sk-your-api-key-here
-N8N_WEBHOOK_TEST=http://localhost:5678/webhook-test/eco-action
-N8N_WEBHOOK_PROD=https://your-n8n.example.com/webhook/eco-action
+# AI & Core
+OPENAI_API_KEY=sk-your-key
+
+# Agentic Workflow (n8n + ngrok)
+N8N_WEBHOOK_PROD=https://your-ngrok-id.ngrok-free.app/webhook/eco-action
+
+# SMTP Sandbox (Configure these inside n8n Credentials)
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=2525
 ```
 
+**Environment Variables:**
 - **OPENAI_API_KEY**: Required for the AI chat and analysis.
 - **N8N_WEBHOOK_TEST**: Used when Integration Hub environment mode is **Development/Sandbox** (e.g. local n8n). Server reads this from the server env; optional Test URL in Integration Hub is a fallback when `N8N_WEBHOOK_TEST` is not set.
 - **N8N_WEBHOOK_PROD**: Used when environment mode is **Live/Production**; never exposed in the UI (server-only).
@@ -157,15 +182,6 @@ To enable automated sustainability workflows:
    ```bash
    npx n8n start
    ```
-
-2. **Create webhook workflow** (so it listens without opening n8n UI):
-   - Access n8n at http://localhost:5678
-   - Create new workflow with Webhook node (path e.g. `webhook-test/eco-action`, method POST)
-   - Set Webhook node **Response Mode** to **"Immediately"** so TerraInsight gets a fast response
-   - **Activate** the workflow (toggle On)—then the webhook URL is **always listening**; no need to click "Listen for test event" in the dashboard
-   - Use that workflow’s **Production** URL in `.env.local` as `N8N_WEBHOOK_TEST` for dev (or the Test URL only if you’re okay manually starting "Listen for test event" each time)
-
-> **Pro-Tip for Evaluators:** To test the Agentic Workflow without manual intervention, ensure the n8n workflow is set to **Active**. This allows TerraInsight to trigger actions 24/7 without needing to click "Listen for test event" in the n8n UI.
 
 ## Architecture
 

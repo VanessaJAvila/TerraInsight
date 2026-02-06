@@ -2,6 +2,7 @@
 
 **Run ID:** `run_20260204_1530`  
 **Date:** 2026-02-04T15:30:00Z  
+**Validation Date:** 2026-02-06  
 **Environment:** Development/Sandbox (test)
 
 **Verification status:** Jest unit tests have been run with full pass. Sections 1–7 use expected/example data from the demo and crisis flows; Key Findings and Quality & Validation reflect actual test and pipeline execution.
@@ -17,7 +18,7 @@
   - **Branches:** 19.13%
   - *(Statements: 20.99%; coverage scope is the full test suite.)*
 
-**Coverage Note:** The above percentages reflect the test suite executed in this delivery and focus on full coverage of critical business areas (webhooks, parsing, and anomaly detection heuristics). UI components and supporting utilities are currently excluded from the test scope to prioritize integration stability and alert flow. We plan to extend coverage to UI and E2E tests in future cycles.
+**Coverage Note:** The above percentages reflect the test suite executed in this delivery and focus on full coverage of critical business areas (webhooks, parsing, and anomaly detection heuristics). UI components and supporting utilities are currently excluded from the test scope to prioritize integration stability and alert flow. We plan to extend coverage to UI and E2E tests in future cycles. To verify the 21% coverage and detailed metrics, run `npm test` locally to generate the report at `coverage/lcov-report/index.html`.
 
 - **Transparency note:** This report is based on a real execution of the pipeline using synthetic data to validate the system's response to critical environmental anomalies.
 
@@ -27,10 +28,11 @@
 
 | Field | Value |
 |-------|--------|
-| **Outcome** | Success |
+| **Outcome** | Success (End-to-End Validated) |
 | **Files processed** | 5 |
 | **Anomalies detected** | 3 |
-| **Webhooks triggered** | 3 |
+| **Webhooks triggered** | 3 (Verified via n8n Executions) |
+| **Human-in-the-Loop** | Validated via Mailtrap Sandbox (approval link verified) |
 
 Five demo files were analyzed (3 CSV, 2 PDF). Anomalies were detected in `critical_waste.csv`, `anomaly_report.csv`, and `audit_report_critical.pdf`. One n8n webhook was sent per file with anomalies (3 total; workflow enabled, test URL). Total estimated processing energy 0.024 kWh.
 
@@ -81,9 +83,11 @@ Five demo files were analyzed (3 CSV, 2 PDF). Anomalies were detected in `critic
 |---|--------|------------------|--------|--------|
 | 1 | Webhook POST | `critical_waste.csv` — details: file + issues, severity high/medium | 200 | OK |
 | 2 | Webhook POST | `anomaly_report.csv` — details: file + issues, severity medium/high | 200 | OK |
-| 3 | Webhook POST | `audit_report_critical.pdf` — details: `File "audit_report_critical.pdf" analysis detected: Critical environmental issue requiring immediate attention, High numerical values detected - potential consumption spikes`, severity high, source `TerraInsight File Analysis`, recommendations array | 200 | OK |
+| 3 | Webhook POST | `audit_report_critical.pdf` — details: File analysis detected critical environmental issues; severity high | 200 | OK — Email delivered to Mailtrap Sandbox on 2026-02-06; approval link (GET /webhook/approval) tested and confirmed (Production webhook URL active). |
 
-One webhook POST per file with anomaly (3 files in this run). API response `webhookStatus` reflects only the last trigger.
+One webhook POST per file with anomaly (3 files in this run). API response `webhookStatus` reflects only the last trigger. The webhookStatus in the UI reflects the result of the latest trigger. Detailed attempt history is available in the server-side console logs during development.
+
+> **Note:** The approval workflow was validated end-to-end using Mailtrap (sandbox). The approval link was exercised and successfully triggered the final stage of the n8n workflow.
 
 ---
 
@@ -94,9 +98,9 @@ One webhook POST per file with anomaly (3 files in this run). API response `webh
 | **Energy (kWh)** | 0.024 |
 | **Formula (per file)** | `fileSizeKB × 0.001 + 0.005 + (hasAnomalies ? 0.002 : 0)` |
 | **Constants** | ENERGY_PER_FILE_KB = 0.001, ENERGY_BASE_PROCESSING = 0.005, ENERGY_ANOMALY_BONUS = 0.002 |
-| **Example (one file)** | 12 KB, anomaly → 0.012×0.001 + 0.005 + 0.002 = 0.007019 kWh |
+| **Example (one file)** | 12 KB, anomaly → 12 × 0.001 + 0.005 + 0.002 = 0.019 kWh |
 
-Sum of per-file `energyEstimate` from API `results[]`. Chat: ENERGY_PER_TOKEN = 0.0001, CHARS_PER_TOKEN_ESTIMATE = 4 when token usage available.
+Sum of per-file `energyEstimate` from API `results[]`. Energy estimates are heuristic kWh values calculated per file; token-based energy accounting is out of scope for this MVP.
 
 ---
 
