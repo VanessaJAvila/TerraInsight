@@ -6,6 +6,16 @@ Professional ecological impact analysis platform with AI-powered sustainability 
 
 TerraInsight is a Next.js 15 application that combines advanced AI analysis with sustainability expertise. The platform helps organizations track, analyze, and optimize their environmental impact through intelligent data processing and automated workflow triggers.
 
+## 📺 Technical Walkthrough
+Watch the full demo here: [https://www.loom.com/share/5bda6bc5ca784b8690b2677514d48a57]
+
+**Timestamps:**
+- **0:00** - Project Overview & Tech Stack
+- **1:30** - Heuristic Anomaly Detection (CSV/PDF)
+- **3:00** - n8n Integration & Webhook Trigger
+- **4:30** - Human-in-the-Loop (Mailtrap Approval)
+- **5:45** - Energy Consumption Heuristics & Final Thoughts
+
 ## Important Links
 
 - **GitHub Repository:** https://github.com/VanessaJAvila/TerraInsight.git
