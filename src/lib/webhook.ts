@@ -22,8 +22,8 @@ const RETRY_DELAY_MS = 800;
 const RETRY_ON_STATUS_MIN = 500;
 
 /**
- * Masks a URL for safe logging: keeps protocol and host, redacts path.
- * Use this for all logs to avoid leaking webhook paths or query params.
+ * Masks URL for safe logging: keeps protocol and host, redacts path.
+ * SECURITY: Prevents leaking webhook paths or query params in logs.
  */
 export function maskUrlForLog(url: string): string {
   try {
@@ -34,10 +34,7 @@ export function maskUrlForLog(url: string): string {
   }
 }
 
-/**
- * Validates that a string is a usable HTTP/HTTPS URL for webhook calls.
- * Exported for unit testing.
- */
+/** Exported for unit testing. */
 export function validateWebhookUrl(url: string): { valid: boolean; error?: string } {
   const trimmed = (url ?? "").trim();
   if (!trimmed) {
@@ -55,8 +52,6 @@ export function validateWebhookUrl(url: string): { valid: boolean; error?: strin
 }
 
 /**
- * Resolves the n8n webhook URL for the given environment mode.
- *
  * SECURITY:
  * - Production URL is read only from process.env.N8N_WEBHOOK_PROD on the server.
  * - Production URL is never exposed to the client; client sends only envMode and optional test URL.
@@ -84,19 +79,13 @@ export function resolveN8nWebhookUrl(
 
   const fallback = (n8nWebhookTestFromClient ?? "").trim();
   if (fallback) {
-    if (typeof console !== "undefined" && console.warn) {
-      console.warn("[n8n] N8N_WEBHOOK_TEST not set; using client-provided test URL.");
-    }
     return { url: fallback };
   }
 
   return { url: null };
 }
 
-/**
- * Parses response body safely: tries JSON first, then text.
- * Exported for unit testing.
- */
+/** Exported for unit testing. */
 export async function parseResponseBody(response: Response): Promise<string> {
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   if (contentType.includes("application/json")) {
@@ -110,11 +99,7 @@ export async function parseResponseBody(response: Response): Promise<string> {
   return response.text();
 }
 
-/**
- * Performs a single webhook POST with timeout and abort controller.
- * Clears timeout in all paths (success, non-ok response, throw).
- * Exported for testing / retry orchestration.
- */
+/** Exported for testing / retry orchestration. */
 export async function executeWebhookFetch(
   url: string,
   payload: Record<string, unknown>,
@@ -131,7 +116,7 @@ export async function executeWebhookFetch(
   return { status, body, ok: response.ok };
 }
 
-/** True if we should retry (network failure or 5xx). Exported for testing. */
+/** Exported for testing. */
 export function isRetriableTriggerResult(result: N8nTriggerResult): boolean {
   if (result.status === 0) return true;
   return result.status >= RETRY_ON_STATUS_MIN && result.status < 600;
@@ -149,10 +134,7 @@ function resultFromError(error: unknown): N8nTriggerResult {
   };
 }
 
-/**
- * Performs one webhook attempt with timeout. Timeout is always cleared in finally.
- * Logs using masked URL only. Exported for unit testing.
- */
+/** Exported for unit testing. */
 export async function runOneWebhookAttempt(
   url: string,
   payload: Record<string, unknown>,
@@ -176,23 +158,15 @@ export async function runOneWebhookAttempt(
   }
 }
 
-/**
- * Triggers the n8n webhook with the given payload.
- *
- * - Validates URL before use.
- * - Uses a 30s timeout and abort controller; timeout is always cleared in finally.
- * - Logs only masked URLs (protocol + host, path redacted).
- * - Returns a detailed result; parses response body safely (JSON preferred, then text).
- * - Retry: one retry on network failure or 5xx status, after 800ms delay.
- * - Errors are logged with clear messages; timeouts are distinguished.
- */
 export async function triggerN8nWebhook(
   url: string,
   payload: Record<string, unknown>,
   envMode: EnvMode
 ): Promise<N8nTriggerResult> {
   const validation = validateWebhookUrl(url);
-  if (!validation.valid) return { ok: false, status: 0, detail: validation.error };
+  if (!validation.valid) {
+    return { ok: false, status: 0, detail: validation.error };
+  }
 
   const masked = maskUrlForLog(url);
   const first = await runOneWebhookAttempt(url, payload, envMode, masked);

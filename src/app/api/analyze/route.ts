@@ -1,7 +1,3 @@
-/**
- * File analysis API: PDF/CSV parsing, heuristic anomaly detection, optional n8n webhook.
- * MVP focuses on CSV and PDF to balance structured data (CSV) with report context (PDF).
- */
 import { NextRequest, NextResponse } from "next/server";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import {
@@ -44,7 +40,6 @@ type WebhookConfig = {
   envMode: EnvMode;
 };
 
-/** Parses n8n error response body and returns a user-friendly message (hint or message). */
 function parseN8nWebhookErrorHint(detail: string | undefined): string | null {
   if (!detail || typeof detail !== "string") return null;
   try {
@@ -87,6 +82,55 @@ function buildFileErrorResult(file: File, error: unknown): AnalysisResult {
   };
 }
 
+function determineSkipReason(
+  lastWebhookResult: WebhookResultSummary,
+  anomaliesCount: number,
+  allowTrigger: boolean,
+  webhookUrl: string | null
+): string | undefined {
+  if (lastWebhookResult.triggered || anomaliesCount === 0) {
+    return undefined;
+  }
+  if (!allowTrigger) {
+    return "Workflow triggers disabled — enable in Integration Hub";
+  }
+  if (!webhookUrl) {
+    return "No webhook URL — set N8N_WEBHOOK_TEST in .env or Test URL in Integration Hub";
+  }
+  if (lastWebhookResult.status && lastWebhookResult.status >= 400) {
+    const hint = parseN8nWebhookErrorHint(lastWebhookResult.detail);
+    const base = hint ?? lastWebhookResult.detail ?? `Webhook returned ${lastWebhookResult.status}`;
+    return lastWebhookResult.status === 404 && hint
+      ? `${base} To have the webhook always listening (no need to click in n8n), activate the workflow in n8n.`
+      : base;
+  }
+  return undefined;
+}
+
+function buildSuccessResponse(
+  results: AnalysisResult[],
+  files: File[],
+  lastWebhookResult: WebhookResultSummary,
+  skipReason: string | undefined
+) {
+  const webhookStatus = {
+    triggered: lastWebhookResult.triggered,
+    envMode: lastWebhookResult.envMode,
+    status: lastWebhookResult.status,
+    detail: lastWebhookResult.detail,
+    ...(skipReason && { skipReason }),
+  };
+  return NextResponse.json({
+    success: true,
+    message: "Analysis complete",
+    results,
+    totalFiles: files.length,
+    anomaliesDetected: results.filter((r) => r.anomaly.detected).length,
+    webhook: webhookStatus,
+    webhookStatus,
+  });
+}
+
 async function processAllFiles(
   files: File[],
   webhookConfig: WebhookConfig
@@ -109,58 +153,45 @@ async function processAllFiles(
   return { results, lastWebhookResult };
 }
 
-/**
- * Analyzes uploaded files, runs anomaly detection, and optionally triggers n8n webhook
- * via shared utilities (resolveN8nWebhookUrl, triggerN8nWebhook). Response includes webhookStatus.
- */
+function validateRequest(files: File[], envMode: EnvMode, urlError: string | undefined) {
+  if (envMode === "prod" && urlError) {
+    return NextResponse.json({ error: urlError }, { status: 422 });
+  }
+  if (!files?.length) {
+    return NextResponse.json({ error: "No files provided" }, { status: 400 });
+  }
+  return null;
+}
+
+function handleError(error: unknown) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  if (process.env.NODE_ENV === "development") {
+    console.error("[TerraInsight/analyze] Analysis failed:", err.message, err.stack);
+  }
+  return NextResponse.json(
+    { error: "Failed to analyze files", ...(process.env.NODE_ENV === "development" && { detail: err.message }) },
+    { status: 500 }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const { files, envMode, allowTrigger, n8nWebhookTest } = parseAnalyzeFormData(formData);
 
     const { url: webhookUrl, error: urlError } = resolveN8nWebhookUrl(envMode, n8nWebhookTest);
-    if (envMode === "prod" && urlError) {
-      return NextResponse.json({ error: urlError }, { status: 422 });
-    }
-    if (!files?.length) {
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
-    }
+    const validationError = validateRequest(files, envMode, urlError);
+    if (validationError) return validationError;
 
     const webhookConfig: WebhookConfig = { url: webhookUrl, allowTrigger, envMode };
     const { results, lastWebhookResult } = await processAllFiles(files, webhookConfig);
 
     const anomaliesCount = results.filter((r) => r.anomaly.detected).length;
-    let skipReason: string | undefined;
-    if (!lastWebhookResult.triggered && anomaliesCount > 0) {
-      if (!allowTrigger) skipReason = "Workflow triggers disabled — enable in Integration Hub";
-      else if (!webhookUrl) skipReason = "No webhook URL — set N8N_WEBHOOK_TEST in .env or Test URL in Integration Hub";
-      else if (lastWebhookResult.status && lastWebhookResult.status >= 400) {
-        const hint = parseN8nWebhookErrorHint(lastWebhookResult.detail);
-        const base = hint ?? lastWebhookResult.detail ?? `Webhook returned ${lastWebhookResult.status}`;
-        skipReason = lastWebhookResult.status === 404 && hint
-          ? `${base} To have the webhook always listening (no need to click in n8n), activate the workflow in n8n.`
-          : base;
-      }
-    }
+    const skipReason = determineSkipReason(lastWebhookResult, anomaliesCount, allowTrigger, webhookUrl);
 
-    const webhookStatus = {
-      triggered: lastWebhookResult.triggered,
-      envMode: lastWebhookResult.envMode,
-      status: lastWebhookResult.status,
-      detail: lastWebhookResult.detail,
-      ...(skipReason && { skipReason }),
-    };
-    return NextResponse.json({
-      success: true,
-      message: "Analysis complete",
-      results,
-      totalFiles: files.length,
-      anomaliesDetected: results.filter((r) => r.anomaly.detected).length,
-      webhook: webhookStatus,
-      webhookStatus,
-    });
+    return buildSuccessResponse(results, files, lastWebhookResult, skipReason);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to analyze files" }, { status: 500 });
+    return handleError(error);
   }
 }
 
@@ -176,7 +207,7 @@ async function processFile(
   const fileSize = file.size;
 
   let extractedText = "";
-  let metadata: any = { fileSize };
+  let metadata: { fileSize: number; pageCount?: number; rowCount?: number; headers?: string[] } = { fileSize };
 
   if (fileType === "pdf") {
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -303,6 +334,3 @@ async function parseCSV(file: File): Promise<{ text: string; rowCount: number; h
     headers,
   };
 }
-
-
-
