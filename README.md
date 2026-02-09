@@ -49,8 +49,8 @@ TerraInsight implements a **Human-in-the-Loop (HITL)** architecture to ensure AI
 4. **Human Review:** A manager reviews the technical details in the email and performs the approval/rejection directly within the n8n workflow interface.
 5. **Execution:** Only after explicit human authorization does the workflow proceed with mitigation protocols.
 
-### 🧪 Professional Sandboxing
-For the MVP, we utilize **Mailtrap** as an SMTP Sandbox. This demonstrates a production-ready mindset:
+### 🧪 Sandboxing
+For the MVP, we utilize **Mailtrap** as an SMTP Sandbox:
 - **Safety:** Prevents accidental email blasts during development.
 - **Observability:** Provides a centralized dashboard to audit all automated communications.
 - **Staging Excellence:** Simulates real-world enterprise mail servers (like SendGrid or AWS SES) without infrastructure overhead.
